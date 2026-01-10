@@ -1,5 +1,7 @@
 # WorkspaceContext: Technical Deep Dive
 
+> ⚠️ **HISTORICAL REFERENCE** — This documents the context-based approach which is being replaced by URL-based workspaces. Retained for reference during migration. See `workspace-url-migration.md` for the current approach.
+
 ## How It Works Under the Hood
 
 ### The Core Problem

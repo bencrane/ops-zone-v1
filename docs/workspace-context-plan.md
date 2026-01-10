@@ -1,6 +1,8 @@
 # WorkspaceContext Implementation Plan
 
-**Status:** In Progress  
+> ⚠️ **SUPERSEDED** — This document describes the context-based approach which has been replaced by URL-based workspaces. See `workspace-url-migration.md` for the current plan.
+
+**Status:** ~~In Progress~~ DEPRECATED  
 **Estimated Time:** 30 minutes  
 **Priority:** Foundation (blocks Master Inbox)
 

@@ -2,7 +2,9 @@
 
 **Date:** January 10, 2026  
 **Status:** Decision Made — URL-Based Approach Selected  
-**Next Action:** Migration from Context-based to URL-based workspaces
+**Next Action:** See `workspace-url-migration.md` for implementation plan
+
+> ℹ️ This document captures the decision rationale. For implementation details, see `workspace-url-migration.md`.
 
 ---
 
