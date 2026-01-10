@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Megaphone, Users, LayoutDashboard, Database, ChevronRight, List, Code, Zap, Building2, Mail, Send, Sparkles, Settings, FlaskConical } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PageContainer, PageHeader, PageContent } from "@/components/layout";
+import { WorkspaceIndicator } from "@/components/workspace-indicator";
 
 const adminCards = [
   {
@@ -89,7 +90,10 @@ const adminCards = [
 export default function AdminPage() {
   return (
     <PageContainer>
-      <PageHeader title="Admin" />
+      <PageHeader 
+        title="Admin" 
+        actions={<WorkspaceIndicator />}
+      />
       <PageContent>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {adminCards.map((card) => (

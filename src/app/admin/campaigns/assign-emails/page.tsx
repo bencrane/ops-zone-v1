@@ -4,12 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronDown, Check, Loader2, X, Mail, Megaphone } from "lucide-react";
 import { PageContainer, PageHeader, PageContent } from "@/components/layout";
-
-interface Workspace {
-  id: number;
-  name: string;
-  main: boolean;
-}
+import { useWorkspace } from "@/contexts/workspace-context";
 
 interface Campaign {
   id: number;
@@ -36,7 +31,7 @@ interface CampaignWithEmails extends Campaign {
 type ViewMode = "by-email" | "by-campaign";
 
 export default function AssignEmailAccountsPage() {
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const { refreshKey, currentWorkspace } = useWorkspace();
   const [campaigns, setCampaigns] = useState<CampaignWithEmails[]>([]);
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [emailsWithAssignments, setEmailsWithAssignments] = useState<EmailWithAssignment[]>([]);
@@ -46,24 +41,18 @@ export default function AssignEmailAccountsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("by-email");
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
 
+  // Fetch data - re-runs when workspace changes
   useEffect(() => {
     async function fetchData() {
+      setLoading(true);
       try {
-        const [workspacesRes, campaignsRes, emailsRes] = await Promise.all([
-          fetch("/api/emailbison/workspaces"),
+        const [campaignsRes, emailsRes] = await Promise.all([
           fetch("/api/emailbison/campaigns"),
           fetch("/api/emailbison/email-accounts"),
         ]);
         
-        const workspacesData = await workspacesRes.json();
         const campaignsData = await campaignsRes.json();
         const emailsData = await emailsRes.json();
-
-        // Get current workspace
-        if (workspacesData.data) {
-          const current = workspacesData.data.find((w: Workspace) => w.main);
-          if (current) setWorkspace(current);
-        }
 
         const emails: EmailAccount[] = emailsData.data || [];
         setEmailAccounts(emails);
@@ -103,7 +92,7 @@ export default function AssignEmailAccountsPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [refreshKey]);
 
   const handleAssign = async (emailId: number, campaignId: number) => {
     setActionLoading(`${emailId}-${campaignId}`);
@@ -221,9 +210,9 @@ export default function AssignEmailAccountsPage() {
       />
       <PageContent>
         <div className="max-w-2xl">
-          {workspace && (
+          {currentWorkspace && (
             <p className="text-xs text-zinc-600 mb-4">
-              Workspace: {workspace.name.replace(/"/g, "")}
+              Workspace: {currentWorkspace.name.replace(/"/g, "")}
             </p>
           )}
 

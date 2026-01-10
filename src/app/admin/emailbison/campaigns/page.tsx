@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { PageContainer, PageHeader, PageContent } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { typography, colors } from "@/lib/design-tokens";
+import { useWorkspace } from "@/contexts/workspace-context";
 import {
   ArrowLeft,
   RefreshCw,
@@ -34,12 +35,13 @@ interface Campaign {
 type ActionType = "pause" | "resume" | "delete" | "launch";
 
 export default function CampaignManagementPage() {
+  const { refreshKey } = useWorkspace();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<{ id: number; action: ActionType } | null>(null);
 
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -60,11 +62,12 @@ export default function CampaignManagementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
+  // Fetch campaigns - re-runs when workspace changes
   useEffect(() => {
     fetchCampaigns();
-  }, []);
+  }, [fetchCampaigns, refreshKey]);
 
   const handleAction = async (campaignId: number, action: ActionType) => {
     if (actionLoading) return;

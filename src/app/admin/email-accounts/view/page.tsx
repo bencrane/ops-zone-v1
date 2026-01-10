@@ -4,12 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronDown, Check, Loader2 } from "lucide-react";
 import { PageContainer, PageHeader, PageContent } from "@/components/layout";
-
-interface Workspace {
-  id: number;
-  name: string;
-  main: boolean;
-}
+import { useWorkspace } from "@/contexts/workspace-context";
 
 interface Tag {
   id: number;
@@ -29,38 +24,22 @@ interface EmailAccount {
 }
 
 export default function ViewEmailAccountsPage() {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
+  const { 
+    workspaces, 
+    currentWorkspace, 
+    switchWorkspace, 
+    isLoading: workspaceLoading,
+    refreshKey 
+  } = useWorkspace();
+  
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-
-  // Fetch workspaces on mount
-  useEffect(() => {
-    async function fetchWorkspaces() {
-      try {
-        const res = await fetch("/api/emailbison/workspaces");
-        const result = await res.json();
-        if (result.data) {
-          setWorkspaces(result.data);
-          // Find the main workspace (current)
-          const mainWorkspace = result.data.find((w: Workspace) => w.main);
-          if (mainWorkspace) {
-            setSelectedWorkspace(mainWorkspace);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch workspaces", err);
-      }
-    }
-    fetchWorkspaces();
-  }, []);
 
   // Fetch email accounts when workspace changes
   useEffect(() => {
     async function fetchEmailAccounts() {
-      if (!selectedWorkspace) return;
+      if (!currentWorkspace) return;
       
       setLoading(true);
       try {
@@ -76,32 +55,16 @@ export default function ViewEmailAccountsPage() {
       }
     }
     fetchEmailAccounts();
-  }, [selectedWorkspace]);
+  }, [currentWorkspace, refreshKey]);
 
-  const handleWorkspaceChange = async (workspace: Workspace) => {
-    if (workspace.id === selectedWorkspace?.id) {
+  const handleWorkspaceChange = async (workspaceId: number) => {
+    if (workspaceId === currentWorkspace?.id) {
       setDropdownOpen(false);
       return;
     }
 
-    setSwitchingWorkspace(true);
     setDropdownOpen(false);
-
-    try {
-      const res = await fetch("/api/emailbison/workspaces/switch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspace_id: workspace.id }),
-      });
-
-      if (res.ok) {
-        setSelectedWorkspace(workspace);
-      }
-    } catch (err) {
-      console.error("Failed to switch workspace", err);
-    } finally {
-      setSwitchingWorkspace(false);
-    }
+    await switchWorkspace(workspaceId);
   };
 
   const getStatusColor = (status: string) => {
@@ -144,15 +107,15 @@ export default function ViewEmailAccountsPage() {
           <div className="relative inline-block">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              disabled={switchingWorkspace}
+              disabled={workspaceLoading}
               className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white hover:border-zinc-500 transition-colors disabled:opacity-50"
             >
-              {switchingWorkspace ? (
+              {workspaceLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : null}
               <span className="text-zinc-400 text-sm">Workspace:</span>
               <span className="font-medium">
-                {selectedWorkspace?.name?.replace(/"/g, "") || "Select..."}
+                {currentWorkspace?.name?.replace(/"/g, "") || "Select..."}
               </span>
               <ChevronDown className="h-4 w-4 text-zinc-400" />
             </button>
@@ -162,13 +125,13 @@ export default function ViewEmailAccountsPage() {
                 {workspaces.map((workspace) => (
                   <button
                     key={workspace.id}
-                    onClick={() => handleWorkspaceChange(workspace)}
+                    onClick={() => handleWorkspaceChange(workspace.id)}
                     className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-zinc-800 transition-colors"
                   >
                     <span className="text-white">
                       {workspace.name.replace(/"/g, "")}
                     </span>
-                    {workspace.id === selectedWorkspace?.id && (
+                    {workspace.id === currentWorkspace?.id && (
                       <Check className="h-4 w-4 text-emerald-400" />
                     )}
                   </button>
@@ -275,4 +238,3 @@ export default function ViewEmailAccountsPage() {
     </PageContainer>
   );
 }
-
