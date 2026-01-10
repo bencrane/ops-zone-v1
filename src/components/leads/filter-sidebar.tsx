@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, KeyboardEvent } from "react";
+import { useState, useEffect, KeyboardEvent } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Lock,
   Unlock,
   X,
@@ -16,38 +17,35 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { LeadList } from "@/types";
+import { getLeadLists } from "@/lib/data";
 
 // ============================================================================
-// DESIGN CONSTANTS - Match main content bands exactly
+// DESIGN CONSTANTS
 // ============================================================================
 const BAND_HEIGHT = {
   header: "h-[64px]",
-  leadListRow: "h-[64px]",
+  spacer: "h-[64px]",
 };
 
 // ============================================================================
 // FILTER STATE TYPES
 // ============================================================================
 export interface Filters {
+  selectedListId: string | null; // null = "All Leads"
   industries: string[];
   companySizes: string[];
   jobTitles: string[];
-  tags: string[];
 }
 
 export interface FilterSidebarProps {
   filters: Filters;
   onFiltersChange: (filters: Filters) => void;
-  leadLists: LeadList[];
-  selectedListId: string;
-  onListChange: (listId: string) => void;
 }
 
 // ============================================================================
@@ -164,44 +162,65 @@ function ChipInputSection({ title, placeholder, values, onAdd, onRemove }: ChipI
 export function FilterSidebar({ 
   filters, 
   onFiltersChange,
-  leadLists,
-  selectedListId,
-  onListChange,
 }: FilterSidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
+  const [leadLists, setLeadLists] = useState<LeadList[]>([]);
+
+  // Fetch lead lists on mount
+  useEffect(() => {
+    async function fetchLists() {
+      try {
+        const lists = await getLeadLists();
+        setLeadLists(lists);
+      } catch (err) {
+        console.error("Failed to fetch lead lists:", err);
+      }
+    }
+    fetchLists();
+  }, []);
 
   const toggleOpen = () => setIsOpen((prev) => !prev);
   const toggleLocked = () => setIsLocked((prev) => !prev);
 
-  const addFilter = (key: keyof Filters, value: string) => {
+  const handleListSelect = (listId: string | null) => {
     onFiltersChange({
       ...filters,
-      [key]: [...filters[key], value],
+      selectedListId: listId,
     });
   };
 
-  const removeFilter = (key: keyof Filters, value: string) => {
+  const addFilter = (key: keyof Omit<Filters, 'selectedListId'>, value: string) => {
     onFiltersChange({
       ...filters,
-      [key]: filters[key].filter((v) => v !== value),
+      [key]: [...(filters[key] as string[]), value],
+    });
+  };
+
+  const removeFilter = (key: keyof Omit<Filters, 'selectedListId'>, value: string) => {
+    onFiltersChange({
+      ...filters,
+      [key]: (filters[key] as string[]).filter((v) => v !== value),
     });
   };
 
   const totalActiveFilters =
     filters.industries.length +
     filters.companySizes.length +
-    filters.jobTitles.length +
-    filters.tags.length;
+    filters.jobTitles.length;
 
   const clearAllFilters = () => {
     onFiltersChange({
+      ...filters,
       industries: [],
       companySizes: [],
       jobTitles: [],
-      tags: [],
     });
   };
+
+  const selectedList = filters.selectedListId 
+    ? leadLists.find(l => l.id === filters.selectedListId) 
+    : null;
 
   // Collapsed state
   if (!isOpen) {
@@ -223,7 +242,7 @@ export function FilterSidebar({
 
   return (
     <div className="h-full border-r border-zinc-800 bg-black flex flex-col w-[280px] shrink-0">
-      {/* Row 0: Admin Header - aligns with People/Companies toggle (h-[64px]) */}
+      {/* Row 0: Admin Header */}
       <div className={cn("px-4 flex items-center justify-between border-b border-zinc-800", BAND_HEIGHT.header)}>
         <Link href="/admin" className="flex items-center gap-3 group">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black transition-transform group-hover:scale-105">
@@ -257,26 +276,48 @@ export function FilterSidebar({
         </div>
       </div>
 
-      {/* Row 1: Lead List Selector - aligns with Search bar (h-[64px]) */}
-      <div className={cn("px-4 flex items-center border-b border-zinc-800", BAND_HEIGHT.leadListRow)}>
-        <Select value={selectedListId} onValueChange={onListChange}>
-          <SelectTrigger className="w-full h-8 bg-zinc-900 border-zinc-700 text-white text-sm">
-            <div className="flex items-center gap-2">
-              <List className="h-4 w-4 text-zinc-400 shrink-0" />
-              <SelectValue placeholder="All Leads" />
-            </div>
-          </SelectTrigger>
-          <SelectContent className="bg-zinc-900 border-zinc-700">
-            <SelectItem value="all" className="text-white hover:bg-zinc-800">
+      {/* Row 1: Lead List Selector */}
+      <div className={cn("px-4 flex items-center justify-between border-b border-zinc-800", BAND_HEIGHT.spacer)}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="h-8 px-2 gap-2 text-sm font-medium text-zinc-200 hover:bg-zinc-800 hover:text-white"
+            >
+              <List className="h-4 w-4 text-zinc-500" />
+              <span className="truncate max-w-[160px]">
+                {selectedList ? selectedList.name : "All Leads"}
+              </span>
+              <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56 bg-zinc-900 border-zinc-800">
+            <DropdownMenuItem 
+              onClick={() => handleListSelect(null)}
+              className={cn(
+                "text-sm cursor-pointer",
+                !filters.selectedListId && "bg-zinc-800"
+              )}
+            >
               All Leads
-            </SelectItem>
+            </DropdownMenuItem>
             {leadLists.map((list) => (
-              <SelectItem key={list.id} value={list.id} className="text-white hover:bg-zinc-800">
-                {list.name} ({list.lead_count})
-              </SelectItem>
+              <DropdownMenuItem
+                key={list.id}
+                onClick={() => handleListSelect(list.id)}
+                className={cn(
+                  "text-sm cursor-pointer",
+                  filters.selectedListId === list.id && "bg-zinc-800"
+                )}
+              >
+                <span className="truncate">{list.name}</span>
+                <Badge variant="secondary" className="ml-auto text-[10px] bg-zinc-700 text-zinc-300">
+                  {list.leadCount}
+                </Badge>
+              </DropdownMenuItem>
             ))}
-          </SelectContent>
-        </Select>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Filter sections */}
@@ -301,13 +342,6 @@ export function FilterSidebar({
           values={filters.jobTitles}
           onAdd={(v) => addFilter("jobTitles", v)}
           onRemove={(v) => removeFilter("jobTitles", v)}
-        />
-        <ChipInputSection
-          title="Tags"
-          placeholder="e.g. decision-maker..."
-          values={filters.tags}
-          onAdd={(v) => addFilter("tags", v)}
-          onRemove={(v) => removeFilter("tags", v)}
         />
       </div>
     </div>

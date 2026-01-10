@@ -1,0 +1,65 @@
+# EmailBison API Integration - Campaign Customization
+
+## Overview
+Wire up campaign customization functionality to the EmailBison API. This includes sequence steps (email messages) management and campaign settings updates.
+
+## Current State
+- EmailBison API client and service layer exist in `src/lib/emailbison/`
+- Basic campaign CRUD (list, create, pause, resume, delete) already wired
+- Campaign customize page exists but displays read-only data
+- Messages page exists but uses mock data from `@/lib/data.ts`
+
+## Goals
+1. Enable full sequence step management (create, read, update, delete) via EmailBison API
+2. Enable campaign settings updates via EmailBison API
+3. Replace mock data in messages page with real API calls
+4. Maintain single source of truth principle: all state comes from EmailBison API
+
+## Technical Requirements
+
+### Phase 1: Service Layer (Backend)
+- Fix UpdateSequenceStepInput type to make `order` required per OpenAPI spec
+- Export new sequence step functions from emailbison index
+- Verify all service functions match OpenAPI specification exactly
+
+### Phase 2: API Routes
+- Create Next.js API route: GET/POST `/api/emailbison/campaigns/[campaignId]/sequence-steps`
+- Create Next.js API route: PUT `/api/emailbison/sequence-steps/[sequenceId]`
+- Create Next.js API route: DELETE `/api/emailbison/sequence-steps/[stepId]`
+- Create Next.js API route: PATCH `/api/emailbison/campaigns/[campaignId]/settings`
+
+### Phase 3: UI Integration - Messages Page
+- Replace mock data imports with API fetches
+- Update campaign list to fetch from `/api/emailbison/campaigns`
+- Update sequence steps to fetch from `/api/emailbison/campaigns/[id]/sequence-steps`
+- Wire create step to POST endpoint
+- Wire update step to PUT endpoint (via sequence_id)
+- Wire delete step to DELETE endpoint
+- Handle loading states and errors properly
+
+### Phase 4: UI Integration - Customize Page
+- Add form fields for editable campaign settings
+- Wire form submission to PATCH endpoint
+- Re-fetch campaign data after successful update
+- Remove "not wired" notice
+
+### Phase 5: Testing & Verification
+- Test create sequence step flow end-to-end
+- Test update sequence step flow end-to-end
+- Test delete sequence step flow
+- Test campaign settings update flow
+- Verify UI reflects API state after each mutation
+
+## API Endpoints Reference (from OpenAPI spec)
+- GET `/api/campaigns/v1.1/{campaign_id}/sequence-steps` - View steps
+- POST `/api/campaigns/v1.1/{campaign_id}/sequence-steps` - Create steps (requires title + sequence_steps array)
+- PUT `/api/campaigns/v1.1/sequence-steps/{sequence_id}` - Update steps (each step requires id)
+- DELETE `/api/campaigns/sequence-steps/{sequence_step_id}` - Delete single step
+- PATCH `/api/campaigns/{id}/update` - Update campaign settings
+
+## Constraints
+- All reads must fetch from EmailBison API
+- All writes must call EmailBison API, then re-fetch to confirm state
+- UI state derived directly from EmailBison responses
+- No mock data in production paths
+

@@ -1,0 +1,109 @@
+{
+  "tasks": [
+    {
+      "id": "1",
+      "title": "Fix UpdateSequenceStepInput type",
+      "description": "Make 'order' required in UpdateSequenceStepInput per OpenAPI spec",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [],
+      "updatedAt": "2026-01-10T00:20:30.289Z",
+      "subtasks": []
+    },
+    {
+      "id": "2",
+      "title": "Export sequence step functions from emailbison index",
+      "description": "Ensure all new service functions are exported from src/lib/emailbison/index.ts",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [
+        "1"
+      ],
+      "subtasks": [],
+      "updatedAt": "2026-01-10T00:21:03.241Z"
+    },
+    {
+      "id": "3",
+      "title": "Create API route for sequence steps GET/POST",
+      "description": "Create /api/emailbison/campaigns/[campaignId]/sequence-steps route",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [
+        "2"
+      ],
+      "subtasks": [],
+      "updatedAt": "2026-01-10T00:21:44.954Z"
+    },
+    {
+      "id": "4",
+      "title": "Create API route for sequence steps PUT",
+      "description": "Create /api/emailbison/sequence-steps/[sequenceId] route for updates",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [
+        "2"
+      ],
+      "subtasks": [],
+      "updatedAt": "2026-01-10T00:21:44.956Z"
+    },
+    {
+      "id": "5",
+      "title": "Create API route for sequence step DELETE",
+      "description": "Create /api/emailbison/sequence-steps/[stepId] route for deletion",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [
+        "2"
+      ],
+      "subtasks": [],
+      "updatedAt": "2026-01-10T00:21:44.958Z"
+    },
+    {
+      "id": "6",
+      "title": "Create API route for campaign settings PATCH",
+      "description": "Create /api/emailbison/campaigns/[campaignId]/settings route",
+      "status": "done",
+      "priority": "medium",
+      "dependencies": [
+        "2"
+      ],
+      "subtasks": [],
+      "updatedAt": "2026-01-10T00:21:59.075Z"
+    },
+    {
+      "id": "7",
+      "title": "Wire messages page to EmailBison API",
+      "description": "Replace mock data with real API calls in src/app/admin/campaigns/messages/page.tsx",
+      "status": "done",
+      "priority": "high",
+      "dependencies": [
+        "3",
+        "4",
+        "5"
+      ],
+      "subtasks": [],
+      "updatedAt": "2026-01-10T00:23:44.354Z"
+    },
+    {
+      "id": "8",
+      "title": "Wire customize page settings update",
+      "description": "Add form editing and API calls to src/app/admin/campaigns/customize/page.tsx",
+      "status": "done",
+      "priority": "medium",
+      "dependencies": [
+        "6"
+      ],
+      "subtasks": [],
+      "updatedAt": "2026-01-10T00:24:38.070Z"
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "lastModified": "2026-01-10T00:24:38.070Z",
+    "taskCount": 8,
+    "completedCount": 8,
+    "tags": [
+      "master"
+    ]
+  }
+}

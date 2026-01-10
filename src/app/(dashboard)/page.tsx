@@ -13,6 +13,7 @@ import {
   Zap,
   Target,
   Clock,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -269,7 +270,7 @@ export default async function DashboardPage() {
           </div>
 
           {/* Bottom section */}
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 lg:grid-cols-3">
             {/* Recent Replies */}
             <Card className="bg-zinc-900 border-zinc-800">
               <CardHeader className="flex flex-row items-center justify-between">
@@ -368,6 +369,45 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Leads Viewer */}
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2 text-white">
+                  <Eye className="h-5 w-5 text-cyan-400" />
+                  Leads Viewer
+                </CardTitle>
+                <Link href="/admin/access-leads">
+                  <Button variant="ghost" size="sm" className="gap-1 text-zinc-400 hover:text-white">
+                    Open
+                    <ArrowUpRight className="h-3 w-3" />
+                  </Button>
+                </Link>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-zinc-400">
+                    Search, filter, and view detailed lead information across all your campaigns.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-lg border border-zinc-800 bg-zinc-800/30">
+                      <p className="text-2xl font-bold text-white">{stats.total_leads}</p>
+                      <p className="text-xs text-zinc-400">Total Leads</p>
+                    </div>
+                    <div className="p-3 rounded-lg border border-zinc-800 bg-zinc-800/30">
+                      <p className="text-2xl font-bold text-white">{stats.enrolled_leads}</p>
+                      <p className="text-xs text-zinc-400">Enrolled</p>
+                    </div>
+                  </div>
+                  <Link href="/admin/access-leads" className="block">
+                    <Button className="w-full gap-2 bg-cyan-600 hover:bg-cyan-700">
+                      <Eye className="h-4 w-4" />
+                      View All Leads
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

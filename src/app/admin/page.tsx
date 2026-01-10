@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Megaphone, Users, LayoutDashboard, Database, ChevronRight, List, Plus, Settings, Mail, Code } from "lucide-react";
+import { Megaphone, Users, LayoutDashboard, Database, ChevronRight, List, Code, Zap, Building2, Mail, Send, Sparkles, Settings, FlaskConical } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PageContainer, PageHeader, PageContent } from "@/components/layout";
 
 const adminCards = [
+  {
+    title: "Workspace Selection",
+    description: "Choose which EmailBison workspace to work in",
+    icon: Building2,
+    href: "/admin/workspace",
+  },
   {
     title: "Command Center",
     description: "Overview and system status",
@@ -13,10 +19,22 @@ const adminCards = [
     href: "/",
   },
   {
+    title: "Lead View Test",
+    description: "Debug API connectivity to HQ Data",
+    icon: FlaskConical,
+    href: "/admin/lead-view-test",
+  },
+  {
     title: "Access Leads",
     description: "Discover and source new leads for your lists",
     icon: Database,
     href: "/admin/access-leads",
+  },
+  {
+    title: "Enrich for Emails",
+    description: "Find and verify email addresses for leads",
+    icon: Sparkles,
+    href: "#",
   },
   {
     title: "Eligible Leads",
@@ -31,34 +49,40 @@ const adminCards = [
     href: "/admin/lead-lists",
   },
   {
-    title: "Create Campaign",
-    description: "Start a new email campaign",
-    icon: Plus,
-    href: "/admin/campaigns/create",
-  },
-  {
-    title: "Configure Campaign",
-    description: "Configure send limits, schedules, and sender accounts",
-    icon: Settings,
-    href: "/admin/campaigns/customize",
-  },
-  {
-    title: "Customize Campaign Messages",
-    description: "Edit email sequences, subjects, and message content",
-    icon: Mail,
-    href: "/admin/campaigns/messages",
-  },
-  {
-    title: "View Campaign Metrics",
-    description: "Manage email campaigns and sequences",
+    title: "Campaigns",
+    description: "Create, configure, and manage email campaigns",
     icon: Megaphone,
-    href: "/campaigns",
+    href: "/admin/campaigns-hub",
+  },
+  {
+    title: "Email Accounts",
+    description: "Manage sender email accounts and settings",
+    icon: Mail,
+    href: "/admin/email-accounts",
+  },
+  {
+    title: "Email Account Settings",
+    description: "Configure sender names, signatures, and daily limits",
+    icon: Settings,
+    href: "/admin/email-accounts/settings",
   },
   {
     title: "EmailBison APIs",
     description: "Browse EmailBison API endpoints and documentation",
     icon: Code,
     href: "/admin/api-explorer",
+  },
+  {
+    title: "EmailBison",
+    description: "EmailBison integration and settings",
+    icon: Zap,
+    href: "/admin/emailbison",
+  },
+  {
+    title: "ScaledMail",
+    description: "Manage domains, packages, orders, and mailboxes",
+    icon: Send,
+    href: "/admin/scaledmail",
   },
 ];
 

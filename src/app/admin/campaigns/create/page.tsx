@@ -7,17 +7,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer, PageHeader, PageContent } from "@/components/layout";
-import { createCampaign } from "@/lib/data";
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
 export default function CreateCampaignPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [formState, setFormState] = useState<FormState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -34,16 +31,24 @@ export default function CreateCampaignPage() {
     setErrorMessage("");
 
     try {
-      const campaign = await createCampaign({
-        name: name.trim(),
-        description: description.trim() || undefined,
+      // Call EmailBison API to create campaign
+      const response = await fetch("/api/emailbison/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
       });
+
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        throw new Error(result.error || "Failed to create campaign");
+      }
 
       setFormState("success");
 
-      // Redirect to campaigns list after brief success state
+      // Redirect to campaigns hub after brief success state
       setTimeout(() => {
-        router.push("/campaigns");
+        router.push("/admin/campaigns-hub");
       }, 1500);
     } catch (err) {
       setFormState("error");
@@ -62,10 +67,10 @@ export default function CreateCampaignPage() {
         title="Create Campaign"
         subtitle="Start a new email campaign."
         actions={
-          <Link href="/admin">
+          <Link href="/admin/campaigns-hub">
             <Button variant="outline" className="gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Admin
+              Back to Campaigns
             </Button>
           </Link>
         }
@@ -82,7 +87,7 @@ export default function CreateCampaignPage() {
                   Campaign Created
                 </h3>
                 <p className="text-sm text-zinc-400">
-                  Redirecting to campaigns...
+                  Redirecting...
                 </p>
               </div>
             ) : (
@@ -100,20 +105,9 @@ export default function CreateCampaignPage() {
                     className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
                     autoFocus
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-zinc-300">
-                    Description / Notes
-                  </Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Optional notes about this campaign..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    disabled={isSubmitting}
-                    className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 min-h-[100px] resize-none"
-                  />
+                  <p className="text-xs text-zinc-500">
+                    This will create the campaign in EmailBison.
+                  </p>
                 </div>
 
                 {formState === "error" && errorMessage && (
@@ -137,7 +131,7 @@ export default function CreateCampaignPage() {
                       "Create Campaign"
                     )}
                   </Button>
-                  <Link href="/admin">
+                  <Link href="/admin/campaigns-hub">
                     <Button
                       type="button"
                       variant="ghost"
