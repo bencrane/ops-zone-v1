@@ -2,26 +2,26 @@
 
 **Date:** January 10, 2026 (Updated)  
 **Status:** Ready to Implement  
-**Domain:** admin.ops.zone  
+**Domain:** ops.zone (root domain)  
 **Priority:** High — Foundation for Master Inbox
 
 ---
 
 ## Summary
 
-Migrate from context-based workspace state (`refreshKey` pattern) to URL-based workspaces where the workspace ID is embedded in the URL path. This eliminates stale data bugs and enables multi-tab workflows.
+Migrate from context-based workspace state (`refreshKey` pattern) to URL-based workspaces where the **workspace name/slug** is embedded in the URL path. This eliminates stale data bugs, enables multi-tab workflows, and creates human-readable URLs.
 
 ---
 
 ## Target URL Structure
 
 ```
-admin.ops.zone/
+ops.zone/
 ├── /                           → Black landing page (public)
 ├── /login                      → Auth (public)
-├── /admin                      → Workspace selector / redirect
+├── /select                     → Workspace selector (if multiple)
 │
-└── /workspace/[id]/            → Workspace-scoped routes
+└── /[workspace]/               → Workspace-scoped routes (e.g., /hq/)
     ├── /                       → Dashboard (Command Center)
     ├── /campaigns/             → Campaign management
     ├── /campaigns/create
@@ -35,21 +35,28 @@ admin.ops.zone/
     └── /access-leads/          → Lead sourcing
 ```
 
+**Example URLs:**
+```
+ops.zone/hq/inbox              ← Your "hq" workspace inbox
+ops.zone/hq/campaigns          ← Your campaigns
+ops.zone/acme/inbox            ← Another workspace (future client)
+```
+
 ---
 
 ## Current State vs Target State
 
 | Current | Target |
 |---------|--------|
-| `/admin/campaigns-hub` | `/workspace/[id]/campaigns` |
-| `/admin/email-accounts` | `/workspace/[id]/email-accounts` |
-| `/admin/email-accounts/settings` | `/workspace/[id]/email-accounts/settings` |
-| `/admin/campaigns/customize` | `/workspace/[id]/campaigns/[campaignId]/configure` |
-| `/admin/campaigns/messages` | `/workspace/[id]/campaigns/[campaignId]/messages` |
-| `/admin/campaigns/assign-emails` | `/workspace/[id]/campaigns/[campaignId]/assign-emails` |
-| `/admin/access-leads` | `/workspace/[id]/access-leads` |
-| `/(dashboard)/page.tsx` | `/workspace/[id]/page.tsx` |
-| `/admin/page.tsx` | `/admin` (workspace selector) |
+| `/admin/campaigns-hub` | `/hq/campaigns` |
+| `/admin/email-accounts` | `/hq/email-accounts` |
+| `/admin/email-accounts/settings` | `/hq/email-accounts/settings` |
+| `/admin/campaigns/customize` | `/hq/campaigns/[campaignId]/configure` |
+| `/admin/campaigns/messages` | `/hq/campaigns/[campaignId]/messages` |
+| `/admin/campaigns/assign-emails` | `/hq/campaigns/[campaignId]/assign-emails` |
+| `/admin/access-leads` | `/hq/access-leads` |
+| `/(dashboard)/page.tsx` | `/hq/` (workspace dashboard) |
+| `/admin/page.tsx` | `/select` (workspace selector) |
 
 ---
 
@@ -57,37 +64,35 @@ admin.ops.zone/
 
 ```
 src/app/
-├── (public)/                       # Unauthenticated routes
-│   ├── page.tsx                    # Black landing
-│   └── login/page.tsx              # Login form
+├── page.tsx                        # Black landing (public)
+├── login/page.tsx                  # Login form (public)
+├── select/page.tsx                 # Workspace selector (redirects to /[workspace])
 │
-├── admin/
-│   └── page.tsx                    # Workspace selector (redirects to /workspace/[id])
-│
-├── workspace/
-│   └── [workspaceId]/
-│       ├── layout.tsx              # KEY: Syncs EmailBison session
-│       ├── page.tsx                # Workspace dashboard
-│       ├── campaigns/
-│       │   ├── page.tsx            # Campaign list
-│       │   ├── create/page.tsx
-│       │   └── [campaignId]/
-│       │       ├── configure/page.tsx
-│       │       ├── messages/page.tsx
-│       │       └── assign-emails/page.tsx
-│       ├── email-accounts/
-│       │   ├── page.tsx            # Email account list
-│       │   └── settings/page.tsx
-│       ├── inbox/
-│       │   └── page.tsx            # Master Inbox
-│       ├── leads/
-│       │   └── page.tsx
-│       └── access-leads/
-│           └── page.tsx
+├── [workspace]/                    # Dynamic: /hq, /acme, etc.
+│   ├── layout.tsx                  # KEY: Resolves slug → ID, syncs EmailBison
+│   ├── page.tsx                    # Workspace dashboard
+│   ├── campaigns/
+│   │   ├── page.tsx                # Campaign list
+│   │   ├── create/page.tsx
+│   │   └── [campaignId]/
+│   │       ├── configure/page.tsx
+│   │       ├── messages/page.tsx
+│   │       └── assign-emails/page.tsx
+│   ├── email-accounts/
+│   │   ├── page.tsx                # Email account list
+│   │   └── settings/page.tsx
+│   ├── inbox/
+│   │   └── page.tsx                # Master Inbox
+│   ├── leads/
+│   │   └── page.tsx
+│   └── access-leads/
+│       └── page.tsx
 │
 ├── api/                            # API routes (unchanged)
 └── layout.tsx                      # Root layout
 ```
+
+**Note:** The `[workspace]` folder uses the workspace name as the slug (e.g., "hq", "acme"). The layout resolves this to the numeric EmailBison workspace ID.
 
 ---
 
@@ -95,17 +100,43 @@ src/app/
 
 ### Phase 1: Create Workspace Layout (Foundation)
 
-**File:** `src/app/workspace/[workspaceId]/layout.tsx`
+**File:** `src/app/[workspace]/layout.tsx`
 
 ```tsx
-import { redirect } from 'next/navigation';
-import { Suspense } from 'react';
+import { redirect, notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
+
+interface Workspace {
+  id: number;
+  name: string;
+}
+
+// Fetch all workspaces and find by slug
+async function resolveWorkspace(slug: string): Promise<Workspace | null> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/emailbison/workspaces`, {
+    headers: { Cookie: (await cookies()).toString() },
+    cache: 'no-store',
+  });
+  
+  if (!res.ok) return null;
+  
+  const data = await res.json();
+  const workspaces: Workspace[] = data.data || [];
+  
+  // Match by name (case-insensitive, normalize to slug)
+  return workspaces.find(w => 
+    w.name.toLowerCase().replace(/[^a-z0-9]/g, '-') === slug.toLowerCase() ||
+    w.name.toLowerCase() === slug.toLowerCase()
+  ) || null;
+}
 
 async function syncWorkspace(workspaceId: number) {
-  // Call server-side to ensure EmailBison session matches
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/emailbison/workspaces/switch`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      Cookie: (await cookies()).toString(),
+    },
     body: JSON.stringify({ workspaceId }),
     cache: 'no-store',
   });
@@ -116,44 +147,61 @@ export default async function WorkspaceLayout({
   params,
   children,
 }: {
-  params: Promise<{ workspaceId: string }>;
+  params: Promise<{ workspace: string }>;
   children: React.ReactNode;
 }) {
-  const { workspaceId } = await params;
-  const id = parseInt(workspaceId, 10);
+  const { workspace: slug } = await params;
   
-  if (isNaN(id)) {
-    redirect('/admin');
+  // Reserved routes that aren't workspaces
+  const reserved = ['login', 'select', 'api', '_next'];
+  if (reserved.includes(slug)) {
+    return children; // Let Next.js handle these routes
+  }
+  
+  // Resolve slug to workspace
+  const workspace = await resolveWorkspace(slug);
+  
+  if (!workspace) {
+    notFound(); // Shows 404 if workspace doesn't exist
   }
   
   // Sync EmailBison session to this workspace
-  await syncWorkspace(id);
+  await syncWorkspace(workspace.id);
   
   return (
-    <Suspense fallback={<WorkspaceLoading />}>
-      <WorkspaceShell workspaceId={id}>
-        {children}
-      </WorkspaceShell>
-    </Suspense>
+    <WorkspaceShell workspace={workspace}>
+      {children}
+    </WorkspaceShell>
   );
 }
 
-function WorkspaceLoading() {
+// Provides workspace context to children
+function WorkspaceShell({ 
+  workspace, 
+  children 
+}: { 
+  workspace: Workspace;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-zinc-500">Loading workspace...</div>
+    <div data-workspace-id={workspace.id} data-workspace-name={workspace.name}>
+      {children}
     </div>
   );
 }
 ```
 
-**Key point:** The layout syncs EmailBison BEFORE rendering children. Pages don't need to know about workspace switching.
+**Key points:**
+1. Slug (e.g., "hq") is resolved to workspace ID via API lookup
+2. EmailBison session synced BEFORE rendering children
+3. Reserved routes (`login`, `select`, etc.) bypass workspace logic
+4. 404 if workspace slug doesn't match any workspace name
 
 ---
 
 ### Phase 2: Create Workspace Selector (Entry Point)
 
-**File:** `src/app/admin/page.tsx` (modify existing)
+**File:** `src/app/select/page.tsx` (new)
 
 ```tsx
 'use client';
@@ -167,7 +215,11 @@ interface Workspace {
   name: string;
 }
 
-export default function AdminPage() {
+function toSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+}
+
+export default function SelectWorkspacePage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -176,22 +228,29 @@ export default function AdminPage() {
     async function loadWorkspaces() {
       const res = await fetch('/api/emailbison/workspaces');
       const data = await res.json();
-      setWorkspaces(data.data || []);
+      const list = data.data || [];
+      setWorkspaces(list);
       setLoading(false);
       
       // Auto-redirect if only one workspace
-      if (data.data?.length === 1) {
-        router.push(`/workspace/${data.data[0].id}`);
+      if (list.length === 1) {
+        router.push(`/${toSlug(list[0].name)}`);
       }
     }
     loadWorkspaces();
   }, [router]);
   
-  function handleSelect(id: number) {
-    router.push(`/workspace/${id}`);
+  function handleSelect(ws: Workspace) {
+    router.push(`/${toSlug(ws.name)}`);
   }
   
-  if (loading) return <LoadingState />;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-zinc-500">Loading workspaces...</div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-black p-8">
@@ -200,12 +259,12 @@ export default function AdminPage() {
         {workspaces.map((ws) => (
           <Card 
             key={ws.id}
-            className="cursor-pointer hover:border-zinc-600 transition-colors"
-            onClick={() => handleSelect(ws.id)}
+            className="cursor-pointer hover:border-zinc-600 transition-colors bg-zinc-900 border-zinc-800"
+            onClick={() => handleSelect(ws)}
           >
             <CardHeader>
-              <CardTitle>{ws.name}</CardTitle>
-              <CardDescription>Workspace #{ws.id}</CardDescription>
+              <CardTitle className="text-white">{ws.name}</CardTitle>
+              <CardDescription className="text-zinc-400">/{toSlug(ws.name)}</CardDescription>
             </CardHeader>
           </Card>
         ))}
@@ -215,14 +274,18 @@ export default function AdminPage() {
 }
 ```
 
+**Key point:** Navigates to `/{slug}` (e.g., `/hq`) not `/workspace/123`.
+
 ---
 
 ### Phase 3: Move Dashboard to Workspace Route
 
 **From:** `src/app/(dashboard)/page.tsx`  
-**To:** `src/app/workspace/[workspaceId]/page.tsx`
+**To:** `src/app/[workspace]/page.tsx`
 
 The dashboard component stays mostly the same, just remove any `useWorkspace()` / `refreshKey` dependencies.
+
+**Note:** This becomes the page at `ops.zone/hq/` — the workspace home.
 
 ---
 
@@ -230,7 +293,7 @@ The dashboard component stays mostly the same, just remove any `useWorkspace()` 
 
 For each page, the migration is:
 
-1. Move file to new location under `/workspace/[workspaceId]/`
+1. Move file to new location under `/[workspace]/`
 2. Remove `useWorkspace()` hook usage
 3. Remove `refreshKey` from useEffect dependencies
 4. Data fetching just works (layout already synced workspace)
@@ -244,24 +307,31 @@ useEffect(() => {
   fetchCampaigns();
 }, [refreshKey]);
 
-// AFTER: src/app/workspace/[workspaceId]/campaigns/page.tsx
+// AFTER: src/app/[workspace]/campaigns/page.tsx
 useEffect(() => {
   fetchCampaigns();
 }, []); // No refreshKey needed - URL change = remount
 ```
 
+**Pages to migrate:**
+- `campaigns/page.tsx` → `/hq/campaigns`
+- `email-accounts/page.tsx` → `/hq/email-accounts`
+- `email-accounts/settings/page.tsx` → `/hq/email-accounts/settings`
+- `access-leads/page.tsx` → `/hq/access-leads`
+- `inbox/page.tsx` → `/hq/inbox` (Master Inbox - new)
+
 ---
 
 ### Phase 5: Update Navigation Components
 
-All internal links must include workspace ID:
+All internal links must include workspace slug:
 
 ```tsx
 // BEFORE
 <Link href="/admin/campaigns-hub">Campaigns</Link>
 
 // AFTER (in workspace context)
-<Link href={`/workspace/${workspaceId}/campaigns`}>Campaigns</Link>
+<Link href={`/${workspace}/campaigns`}>Campaigns</Link>
 ```
 
 Create a helper hook:
@@ -272,17 +342,18 @@ import { useParams } from 'next/navigation';
 
 export function useWorkspaceNav() {
   const params = useParams();
-  const workspaceId = params.workspaceId as string;
+  const workspace = params.workspace as string; // e.g., "hq"
   
   return {
-    workspaceId,
-    href: (path: string) => `/workspace/${workspaceId}${path}`,
+    workspace,
+    href: (path: string) => `/${workspace}${path}`,
   };
 }
 
 // Usage
 const { href } = useWorkspaceNav();
 <Link href={href('/campaigns')}>Campaigns</Link>
+// Results in: /hq/campaigns
 ```
 
 ---
@@ -310,8 +381,8 @@ const navItems = [
 export function WorkspaceNav() {
   const params = useParams();
   const pathname = usePathname();
-  const workspaceId = params.workspaceId as string;
-  const basePath = `/workspace/${workspaceId}`;
+  const workspace = params.workspace as string; // e.g., "hq"
+  const basePath = `/${workspace}`;
   
   return (
     <nav>
@@ -334,6 +405,11 @@ export function WorkspaceNav() {
 }
 ```
 
+**Example navigation for workspace "hq":**
+- Dashboard → `/hq`
+- Campaigns → `/hq/campaigns`
+- Inbox → `/hq/inbox`
+
 ---
 
 ### Phase 7: Workspace Switcher (In-App)
@@ -345,30 +421,44 @@ Add switcher to workspace layout header:
 
 import { useRouter, useParams, usePathname } from 'next/navigation';
 
-export function WorkspaceSwitcher({ workspaces, currentId }) {
+interface Workspace {
+  id: number;
+  name: string;
+}
+
+function toSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+}
+
+export function WorkspaceSwitcher({ workspaces }: { workspaces: Workspace[] }) {
   const router = useRouter();
+  const params = useParams();
   const pathname = usePathname();
+  const currentSlug = params.workspace as string;
   
-  function handleSwitch(newId: number) {
-    // Replace workspace ID in current path
-    const newPath = pathname.replace(
-      /\/workspace\/\d+/,
-      `/workspace/${newId}`
-    );
-    router.push(newPath);
+  function handleSwitch(newSlug: string) {
+    // Replace workspace slug in current path
+    // /hq/campaigns → /acme/campaigns
+    const pathParts = pathname.split('/');
+    pathParts[1] = newSlug; // Replace the workspace segment
+    router.push(pathParts.join('/'));
   }
   
   return (
-    <select value={currentId} onChange={(e) => handleSwitch(Number(e.target.value))}>
+    <select 
+      value={currentSlug} 
+      onChange={(e) => handleSwitch(e.target.value)}
+      className="bg-zinc-800 text-white border-zinc-700 rounded px-2 py-1"
+    >
       {workspaces.map(ws => (
-        <option key={ws.id} value={ws.id}>{ws.name}</option>
+        <option key={ws.id} value={toSlug(ws.name)}>{ws.name}</option>
       ))}
     </select>
   );
 }
 ```
 
-**Key:** Switching workspace navigates to NEW URL, preserving the current page path.
+**Key:** Switching workspace navigates to NEW URL (e.g., `/hq/campaigns` → `/acme/campaigns`), preserving the current page path.
 
 ---
 
@@ -384,43 +474,52 @@ export function WorkspaceSwitcher({ workspaces, currentId }) {
 ## Migration Checklist
 
 ### Phase 1: Foundation
-- [ ] Create `src/app/workspace/[workspaceId]/layout.tsx`
+- [ ] Create `src/app/[workspace]/layout.tsx`
+- [ ] Implement slug → ID resolution
 - [ ] Implement workspace sync in layout
+- [ ] Handle reserved routes (login, select, api)
 - [ ] Test layout renders children after sync
 
 ### Phase 2: Entry Point
-- [ ] Update `src/app/admin/page.tsx` as workspace selector
+- [ ] Create `src/app/select/page.tsx` (workspace selector)
 - [ ] Auto-redirect if single workspace
-- [ ] Test selection navigates correctly
+- [ ] Test selection navigates to `/hq`
 
 ### Phase 3: Dashboard
-- [ ] Create `src/app/workspace/[workspaceId]/page.tsx`
+- [ ] Create `src/app/[workspace]/page.tsx`
 - [ ] Copy dashboard logic (remove refreshKey)
-- [ ] Test dashboard loads for workspace
+- [ ] Test dashboard loads at `/hq`
 
 ### Phase 4: Page Migration
-- [ ] `/campaigns` (campaigns-hub)
-- [ ] `/campaigns/[id]/configure` (customize)
-- [ ] `/campaigns/[id]/messages`
-- [ ] `/campaigns/[id]/assign-emails`
-- [ ] `/email-accounts`
-- [ ] `/email-accounts/settings`
-- [ ] `/access-leads`
-- [ ] `/leads`
+- [ ] `/[workspace]/campaigns` (campaigns-hub)
+- [ ] `/[workspace]/campaigns/[id]/configure` (customize)
+- [ ] `/[workspace]/campaigns/[id]/messages`
+- [ ] `/[workspace]/campaigns/[id]/assign-emails`
+- [ ] `/[workspace]/email-accounts`
+- [ ] `/[workspace]/email-accounts/settings`
+- [ ] `/[workspace]/access-leads`
+- [ ] `/[workspace]/leads`
+- [ ] `/[workspace]/inbox` (Master Inbox - new)
 
 ### Phase 5: Navigation
 - [ ] Create `useWorkspaceNav()` hook
-- [ ] Update all internal links
+- [ ] Update all internal links to use slug
 - [ ] Create `WorkspaceNav` component
 
 ### Phase 6: Workspace Switcher
 - [ ] Add switcher to workspace layout
-- [ ] Test switching preserves current page
+- [ ] Test switching preserves current page (`/hq/inbox` → `/acme/inbox`)
 
-### Phase 7: Clean Up
-- [ ] Remove WorkspaceContext
+### Phase 7: DNS & Domain
+- [ ] Add `ops.zone` to Vercel project
+- [ ] Configure DNS for ops.zone → Vercel
+- [ ] Update middleware for new routes
+- [ ] Test auth flow with new URLs
+
+### Phase 8: Clean Up
+- [ ] Remove WorkspaceContext (or simplify)
 - [ ] Remove refreshKey pattern
-- [ ] Delete legacy components
+- [ ] Delete legacy `/admin/*` routes
 - [ ] Update docs
 
 ---
@@ -431,8 +530,9 @@ export function WorkspaceSwitcher({ workspaces, currentId }) {
 |--------|--------|-------|
 | Stale data bugs | Possible (forget refreshKey) | Impossible |
 | Multi-tab workflows | Confusing | Clean |
-| Bookmarkable workspaces | No | Yes |
+| Bookmarkable workspaces | No | Yes (`ops.zone/hq/inbox`) |
 | Shareable links | No | Yes |
+| URL readability | N/A | Human-readable (`/hq/campaigns`) |
 | Debugging | "What workspace?" | Look at URL |
 | Code complexity | useWorkspace everywhere | Layout handles it |
 
@@ -441,9 +541,22 @@ export function WorkspaceSwitcher({ workspaces, currentId }) {
 ## Notes
 
 - **Auth is already implemented** — login page and middleware protect all routes except `/` and `/login`
-- **Domain is set** — admin.ops.zone
+- **Domain:** Moving from `admin.ops.zone` to `ops.zone` (root domain)
+- **Workspace as slug:** URLs use workspace name (e.g., "hq") not numeric ID
 - **No API changes needed** — same EmailBison API endpoints
 - **Master Inbox depends on this** — complete before inbox implementation
+- **Single workspace auto-redirect:** If user has only one workspace, `/select` redirects directly to it
+
+---
+
+## DNS Setup Required
+
+Before going live with `ops.zone`:
+
+1. Point `ops.zone` A record to Vercel: `76.76.21.21`
+2. Or CNAME: `ops.zone` → `cname.vercel-dns.com`
+3. Add `ops.zone` as domain in Vercel project settings
+4. Can keep `admin.ops.zone` as alias during transition
 
 ---
 
