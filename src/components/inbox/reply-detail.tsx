@@ -349,16 +349,18 @@ export function ReplyDetail({ reply, onStatusUpdate, onDelete }: ReplyDetailProp
             )}
           </div>
         )}
-      </div>
 
-      {/* Reply composer */}
-      {showComposer && (
-        <ReplyComposer
-          parentReply={reply}
-          onClose={() => setShowComposer(false)}
-          onSent={handleReplySent}
-        />
-      )}
+        {/* Reply composer - inline */}
+        {showComposer && (
+          <div className="mt-8 border-t border-zinc-800 pt-6 pb-8">
+            <ReplyComposer
+              parentReply={reply}
+              onClose={() => setShowComposer(false)}
+              onSent={handleReplySent}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

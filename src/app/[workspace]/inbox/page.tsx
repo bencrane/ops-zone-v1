@@ -1,10 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, RefreshCw, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useWorkspaceNav } from '@/hooks/use-workspace-nav';
 import { FilterSidebar, type FolderFilter, type StatusFilter } from '@/components/inbox/filter-sidebar';
 import { ReplyList } from '@/components/inbox/reply-list';
 import { ReplyDetail } from '@/components/inbox/reply-detail';
@@ -20,8 +16,6 @@ interface FilterState {
 }
 
 export default function InboxPage() {
-  const { href } = useWorkspaceNav();
-
   const [filters, setFilters] = useState<FilterState>({
     folder: 'inbox',
     status: undefined,
@@ -33,7 +27,6 @@ export default function InboxPage() {
 
   const [replies, setReplies] = useState<Reply[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [selectedReply, setSelectedReply] = useState<Reply | null>(null);
@@ -63,7 +56,6 @@ export default function InboxPage() {
         setReplies(data.data || []);
       }
 
-      // Check if there are more pages
       if (data.meta) {
         setHasMore(data.meta.current_page < data.meta.last_page);
       } else {
@@ -75,20 +67,13 @@ export default function InboxPage() {
       console.error('Failed to fetch replies:', error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [filters]);
 
-  // Fetch on mount and when filters change
   useEffect(() => {
     setSelectedReply(null);
     fetchReplies(1);
   }, [fetchReplies]);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchReplies(1);
-  };
 
   const handleLoadMore = () => {
     fetchReplies(page + 1, true);
@@ -97,7 +82,6 @@ export default function InboxPage() {
   const handleReplySelect = async (reply: Reply) => {
     setSelectedReply(reply);
 
-    // Mark as read if not already
     if (!reply.read) {
       try {
         await fetch(`/api/emailbison/replies/${reply.id}/status`, {
@@ -106,7 +90,6 @@ export default function InboxPage() {
           body: JSON.stringify({ action: 'read' }),
         });
 
-        // Update local state
         setReplies((prev) =>
           prev.map((r) => (r.id === reply.id ? { ...r, read: true } : r))
         );
@@ -130,73 +113,35 @@ export default function InboxPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col bg-black">
-      {/* Header */}
-      <div className="flex-shrink-0 border-b border-zinc-800 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href={href('/')}>
-              <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-xl font-semibold text-white">Master Inbox</h1>
-              <p className="text-sm text-zinc-500">
-                {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
-              </p>
-            </div>
-          </div>
+    <div className="h-[calc(100vh-56px)] flex overflow-hidden bg-black pt-6">
+      {/* Filter sidebar */}
+      <FilterSidebar filters={filters} onFilterChange={setFilters} />
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="text-zinc-400"
-          >
-            {refreshing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            <span className="ml-2">Refresh</span>
-          </Button>
-        </div>
+      {/* Reply list */}
+      <div className="w-96 flex-shrink-0 border-r border-zinc-800 overflow-hidden">
+        <ReplyList
+          replies={replies}
+          loading={loading}
+          selectedReplyId={selectedReply?.id ?? null}
+          onReplySelect={handleReplySelect}
+          onLoadMore={handleLoadMore}
+          hasMore={hasMore}
+        />
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Filter sidebar */}
-        <FilterSidebar filters={filters} onFilterChange={setFilters} />
-
-        {/* Reply list */}
-        <div className="w-96 flex-shrink-0 border-r border-zinc-800 overflow-hidden">
-          <ReplyList
-            replies={replies}
-            loading={loading}
-            selectedReplyId={selectedReply?.id ?? null}
-            onReplySelect={handleReplySelect}
-            onLoadMore={handleLoadMore}
-            hasMore={hasMore}
+      {/* Reply detail */}
+      <div className="flex-1 overflow-hidden">
+        {selectedReply ? (
+          <ReplyDetail
+            reply={selectedReply}
+            onStatusUpdate={handleStatusUpdate}
+            onDelete={handleReplyDeleted}
           />
-        </div>
-
-        {/* Reply detail */}
-        <div className="flex-1 overflow-hidden">
-          {selectedReply ? (
-            <ReplyDetail
-              reply={selectedReply}
-              onStatusUpdate={handleStatusUpdate}
-              onDelete={handleReplyDeleted}
-            />
-          ) : (
-            <div className="h-full flex items-center justify-center text-zinc-600">
-              <p>Select a message to view</p>
-            </div>
-          )}
-        </div>
+        ) : (
+          <div className="h-full flex items-center justify-center text-zinc-600">
+            <p>Select a message to view</p>
+          </div>
+        )}
       </div>
     </div>
   );

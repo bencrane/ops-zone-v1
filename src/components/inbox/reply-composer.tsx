@@ -1,20 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { X, Send, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Send, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import type { Reply, EmailAccount } from '@/lib/emailbison/types';
+import type { Reply } from '@/lib/emailbison/types';
+
+const STANDARD_VARIABLES = [
+  { name: 'FIRST_NAME', description: 'Lead first name' },
+  { name: 'LAST_NAME', description: 'Lead last name' },
+  { name: 'EMAIL', description: 'Lead email address' },
+  { name: 'COMPANY', description: 'Lead company' },
+  { name: 'TITLE', description: 'Lead job title' },
+];
 
 interface ReplyComposerProps {
   parentReply: Reply;
@@ -23,59 +21,110 @@ interface ReplyComposerProps {
 }
 
 export function ReplyComposer({ parentReply, onClose, onSent }: ReplyComposerProps) {
-  const [senderEmails, setSenderEmails] = useState<EmailAccount[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showVars, setShowVars] = useState(false);
+  const [varFilter, setVarFilter] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const cursorPosRef = useRef(0);
 
-  const [senderEmailId, setSenderEmailId] = useState<number | null>(
-    parentReply.sender_email_id || null
+  const filteredVars = STANDARD_VARIABLES.filter(v =>
+    v.name.toLowerCase().includes(varFilter.toLowerCase())
   );
-  const [toEmail, setToEmail] = useState(parentReply.from_email_address);
-  const [ccEmails, setCcEmails] = useState('');
-  const [message, setMessage] = useState('');
-  const [includePrevious, setIncludePrevious] = useState(true);
 
-  // Fetch sender emails
   useEffect(() => {
-    async function fetchSenderEmails() {
-      setLoading(true);
-      try {
-        const res = await fetch('/api/emailbison/email-accounts');
-        const data = await res.json();
-        const accounts = data.data || [];
-        setSenderEmails(accounts);
+    if (showVars) {
+      setSelectedIndex(0);
+    }
+  }, [showVars, varFilter]);
 
-        // If we don't have a sender email set, try to match the original receiver
-        if (!senderEmailId) {
-          const matchingAccount = accounts.find(
-            (acc: EmailAccount) => acc.email === parentReply.primary_to_email_address
-          );
-          if (matchingAccount) {
-            setSenderEmailId(matchingAccount.id);
-          } else if (accounts.length > 0) {
-            setSenderEmailId(accounts[0].id);
-          }
+  const insertVariable = (varName: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const pos = cursorPosRef.current;
+    // Find the opening { before cursor
+    const beforeCursor = message.slice(0, pos);
+    const bracePos = beforeCursor.lastIndexOf('{');
+    
+    if (bracePos !== -1) {
+      const before = message.slice(0, bracePos);
+      const after = message.slice(pos);
+      const newMessage = `${before}{${varName}}${after}`;
+      setMessage(newMessage);
+      
+      // Set cursor after the inserted variable
+      setTimeout(() => {
+        const newPos = bracePos + varName.length + 2;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.focus();
+      }, 0);
+    }
+    
+    setShowVars(false);
+    setVarFilter('');
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const pos = e.target.selectionStart || 0;
+    cursorPosRef.current = pos;
+    setMessage(value);
+
+    // Check if we just typed {
+    const charBefore = value[pos - 1];
+    if (charBefore === '{') {
+      setShowVars(true);
+      setVarFilter('');
+    } else if (showVars) {
+      // Update filter based on text after {
+      const beforeCursor = value.slice(0, pos);
+      const bracePos = beforeCursor.lastIndexOf('{');
+      if (bracePos !== -1) {
+        const typed = beforeCursor.slice(bracePos + 1);
+        if (typed.includes('}') || typed.includes(' ') || typed.includes('\n')) {
+          setShowVars(false);
+          setVarFilter('');
+        } else {
+          setVarFilter(typed);
         }
-      } catch (err) {
-        console.error('Failed to fetch sender emails:', err);
-      } finally {
-        setLoading(false);
+      } else {
+        setShowVars(false);
+        setVarFilter('');
       }
     }
+  };
 
-    fetchSenderEmails();
-  }, [parentReply.primary_to_email_address, parentReply.sender_email_id, senderEmailId]);
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSend();
+      return;
+    }
+
+    if (showVars) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex(i => Math.min(i + 1, filteredVars.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex(i => Math.max(i - 1, 0));
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        if (filteredVars[selectedIndex]) {
+          insertVariable(filteredVars[selectedIndex].name);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowVars(false);
+        setVarFilter('');
+      }
+    }
+  };
 
   const handleSend = async () => {
-    if (!senderEmailId) {
-      setError('Please select a sender email');
-      return;
-    }
-    if (!toEmail.trim()) {
-      setError('Please enter a recipient');
-      return;
-    }
     if (!message.trim()) {
       setError('Please enter a message');
       return;
@@ -85,20 +134,12 @@ export function ReplyComposer({ parentReply, onClose, onSent }: ReplyComposerPro
     setError(null);
 
     try {
-      const toEmails = [{ name: null, address: toEmail.trim() }];
-      const cc = ccEmails
-        .split(',')
-        .map((e) => e.trim())
-        .filter(Boolean)
-        .map((address) => ({ name: null, address }));
-
       const payload = {
         message,
-        sender_email_id: senderEmailId,
-        to_emails: toEmails,
-        inject_previous_email_body: includePrevious,
+        sender_email_id: parentReply.sender_email_id,
+        to_emails: [{ name: parentReply.from_name || null, address: parentReply.from_email_address }],
+        inject_previous_email_body: true,
         content_type: 'text' as const,
-        ...(cc.length > 0 && { cc_emails: cc }),
       };
 
       const res = await fetch(`/api/emailbison/replies/${parentReply.id}/reply`, {
@@ -122,119 +163,80 @@ export function ReplyComposer({ parentReply, onClose, onSent }: ReplyComposerPro
   };
 
   return (
-    <div className="border-t border-zinc-800 bg-zinc-900">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-        <h3 className="text-sm font-medium text-white">Reply</h3>
-        <Button variant="ghost" size="sm" onClick={onClose} className="text-zinc-400">
+    <div className="bg-zinc-900/50 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm text-zinc-400">
+          Reply to <span className="text-zinc-200">{parentReply.from_email_address}</span>
+        </span>
+        <Button variant="ghost" size="sm" onClick={onClose} className="text-zinc-500 h-6 w-6 p-0">
           <X className="h-4 w-4" />
         </Button>
       </div>
-
-      {/* Form */}
-      <div className="p-4 space-y-4">
-        {/* From */}
-        <div className="space-y-2">
-          <Label className="text-xs text-zinc-500">From</Label>
-          {loading ? (
-            <div className="h-9 bg-zinc-800 rounded animate-pulse" />
-          ) : (
-            <Select
-              value={senderEmailId?.toString() || ''}
-              onValueChange={(val) => setSenderEmailId(parseInt(val, 10))}
-            >
-              <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                <SelectValue placeholder="Select sender" />
-              </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-700">
-                {senderEmails.map((email) => (
-                  <SelectItem
-                    key={email.id}
-                    value={email.id.toString()}
-                    className="text-zinc-300"
-                  >
-                    {email.name ? `${email.name} <${email.email}>` : email.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-
-        {/* To */}
-        <div className="space-y-2">
-          <Label className="text-xs text-zinc-500">To</Label>
-          <Input
-            value={toEmail}
-            onChange={(e) => setToEmail(e.target.value)}
-            className="bg-zinc-800 border-zinc-700 text-white"
-            placeholder="recipient@example.com"
-          />
-        </div>
-
-        {/* CC */}
-        <div className="space-y-2">
-          <Label className="text-xs text-zinc-500">CC (comma-separated)</Label>
-          <Input
-            value={ccEmails}
-            onChange={(e) => setCcEmails(e.target.value)}
-            className="bg-zinc-800 border-zinc-700 text-white"
-            placeholder="cc@example.com, another@example.com"
-          />
-        </div>
-
-        {/* Message */}
-        <div className="space-y-2">
-          <Label className="text-xs text-zinc-500">Message</Label>
-          <Textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            className="bg-zinc-800 border-zinc-700 text-white min-h-[150px] resize-none"
-            placeholder="Type your reply..."
-          />
-        </div>
-
-        {/* Include previous */}
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="include-previous"
-            checked={includePrevious}
-            onCheckedChange={(checked) => setIncludePrevious(!!checked)}
-            className="border-zinc-600"
-          />
-          <Label htmlFor="include-previous" className="text-sm text-zinc-400 cursor-pointer">
-            Include previous message
-          </Label>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded">
-            {error}
+      
+      <div className="relative">
+        <Textarea
+          ref={textareaRef}
+          value={message}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          className="bg-zinc-800 border-zinc-700 text-white min-h-[200px] resize-y"
+          placeholder="Type your reply... (type { for variables)"
+          autoFocus
+        />
+        
+        {/* Variable autocomplete dropdown */}
+        {showVars && filteredVars.length > 0 && (
+          <div className="absolute top-0 left-0 -translate-y-full -mt-1 w-64 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl overflow-hidden z-50">
+            <div className="px-3 py-2 border-b border-zinc-800 text-xs text-zinc-500">
+              Variables • ↑↓ to navigate • Enter to select
+            </div>
+            {filteredVars.map((v, i) => (
+              <button
+                key={v.name}
+                onClick={() => insertVariable(v.name)}
+                className={`w-full px-3 py-2 text-left text-sm flex items-center justify-between transition-colors ${
+                  i === selectedIndex 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-zinc-300 hover:bg-zinc-800'
+                }`}
+              >
+                <span className="font-mono text-green-400">{`{${v.name}}`}</span>
+                <span className={`text-xs ${i === selectedIndex ? 'text-blue-200' : 'text-zinc-500'}`}>
+                  {v.description}
+                </span>
+              </button>
+            ))}
           </div>
         )}
+      </div>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose} className="text-zinc-400">
-            Cancel
-          </Button>
-          <Button onClick={handleSend} disabled={sending} className="bg-blue-600 hover:bg-blue-700">
-            {sending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4 mr-2" />
-                Send
-              </>
-            )}
-          </Button>
+      {error && (
+        <div className="text-sm text-red-400 mt-3">
+          {error}
         </div>
+      )}
+
+      <div className="flex items-center justify-between mt-3">
+        <span className="text-xs text-zinc-600">⌘+Enter to send • Type {'{'} for variables</span>
+        <Button 
+          onClick={handleSend} 
+          disabled={sending || !message.trim()} 
+          size="sm"
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          {sending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Sending...
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4 mr-2" />
+              Send
+            </>
+          )}
+        </Button>
       </div>
     </div>
   );
 }
-

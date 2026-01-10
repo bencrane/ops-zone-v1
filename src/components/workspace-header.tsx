@@ -14,6 +14,23 @@ function toSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+// Map pathname to page title
+function getPageTitle(pathname: string): string {
+  const path = pathname.split('/').slice(2).join('/'); // Remove workspace slug
+  
+  if (path === 'inbox') return 'Master Inbox';
+  if (path === 'campaigns') return 'Campaigns';
+  if (path === 'email-accounts') return 'Email Accounts';
+  if (path === 'leads') return 'Leads';
+  if (path === 'lead-lists') return 'Lead Lists';
+  if (path === 'access-leads') return 'Access Leads';
+  if (path === 'settings') return 'Settings';
+  if (path === '' || path === '/') return 'Dashboard';
+  
+  // Default: capitalize first segment
+  return path.split('/')[0]?.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Dashboard';
+}
+
 export function WorkspaceHeader() {
   const [current, setCurrent] = useState<Workspace | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -46,20 +63,23 @@ export function WorkspaceHeader() {
 
   if (!current) return null;
 
-  const currentSlug = toSlug(current.name);
+  const pageTitle = getPageTitle(pathname);
 
   return (
     <header className="border-b border-zinc-800 bg-zinc-950">
-      <div className="max-w-6xl mx-auto px-8 h-14 flex items-center justify-between">
-        {/* Left: HQ + Workspace Switcher */}
+      <div className="px-6 h-14 flex items-center justify-between">
+        {/* Left: Page Title */}
         <div className="flex items-center gap-4">
           <Link 
             href="/hq"
-            className="text-white font-semibold hover:text-zinc-300 transition-colors"
+            className="text-white font-semibold text-lg hover:text-zinc-300 transition-colors"
           >
-            hq
+            {pageTitle}
           </Link>
-          
+        </div>
+
+        {/* Right: Workspace Switcher */}
+        <div className="flex items-center gap-4">
           <div className="relative">
             <button
               onClick={() => setOpen(!open)}
@@ -70,7 +90,7 @@ export function WorkspaceHeader() {
             </button>
             
             {open && workspaces.length > 1 && (
-              <div className="absolute top-full left-0 mt-2 w-48 py-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-50">
+              <div className="absolute top-full right-0 mt-2 w-48 py-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-50">
                 {workspaces.map((ws) => (
                   <button
                     key={ws.id}
@@ -87,13 +107,7 @@ export function WorkspaceHeader() {
             )}
           </div>
         </div>
-
-        {/* Right: Could add more nav items here */}
-        <div className="flex items-center gap-4">
-          <span className="text-zinc-600 text-sm font-mono">/{currentSlug}</span>
-        </div>
       </div>
     </header>
   );
 }
-

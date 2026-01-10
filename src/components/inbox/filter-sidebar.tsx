@@ -131,7 +131,7 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
     filters.search !== '';
 
   return (
-    <div className="w-64 flex-shrink-0 border-r border-zinc-800 bg-zinc-950 p-4 space-y-6">
+    <div className="w-64 flex-shrink-0 border-r border-zinc-800 bg-zinc-950 p-4 space-y-6 overflow-y-auto">
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
