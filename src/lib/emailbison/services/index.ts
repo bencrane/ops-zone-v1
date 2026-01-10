@@ -40,3 +40,21 @@ export {
   sendTestEmail,
 } from './campaigns';
 
+// Replies (Master Inbox)
+export {
+  listReplies,
+  getReply,
+  deleteReply,
+  getConversationThread,
+  sendReply,
+  composeNewEmail,
+  forwardReply,
+  markAsInterested,
+  markAsNotInterested,
+  markAsReadOrUnread,
+  markAsAutomatedOrNot,
+  unsubscribeContact,
+  attachScheduledEmail,
+  pushToFollowupCampaign,
+  getRepliesForLead,
+} from './replies';

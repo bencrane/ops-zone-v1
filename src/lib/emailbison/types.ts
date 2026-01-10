@@ -446,36 +446,118 @@ export interface CreateWebhookRequest {
 }
 
 // =============================================================================
-// REPLIES
+// REPLIES (MASTER INBOX)
 // =============================================================================
 
-export type ReplyStatus = 'unread' | 'read' | 'replied' | 'archived';
+export type ReplyFolder = 'Inbox' | 'Sent' | 'Spam' | 'Bounced';
+export type ReplyType = 'Tracked Reply' | 'Untracked Reply';
 
-export interface Reply {
+export interface ReplyAttachment {
   id: number;
-  campaign_id: number;
-  lead_id: number;
-  email_account_id: number;
-  subject: string;
-  body: string;
-  from_email: string;
-  from_name: string;
-  status: ReplyStatus;
-  received_at: string;
+  uuid: string;
+  reply_id: number;
+  file_name: string;
+  download_url: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface ListRepliesRequest {
-  campaign_id?: number;
-  status?: ReplyStatus;
-  page?: number;
-  per_page?: number;
+export interface EmailAddress {
+  name: string | null;
+  address: string;
 }
 
+export interface Reply {
+  id: number;
+  uuid: string;
+  folder: ReplyFolder;
+  subject: string;
+  read: boolean;
+  interested: boolean;
+  automated_reply: boolean;
+  html_body: string;
+  text_body: string;
+  raw_body: string | null;
+  headers: Record<string, unknown> | null;
+  date_received: string;
+  type: ReplyType;
+  tracked_reply: boolean;
+  scheduled_email_id: number | null;
+  campaign_id: number | null;
+  lead_id: number | null;
+  sender_email_id: number;
+  raw_message_id: string;
+  from_name: string;
+  from_email_address: string;
+  primary_to_email_address: string;
+  to: EmailAddress[];
+  cc: EmailAddress[] | null;
+  bcc: EmailAddress[] | null;
+  parent_id: number | null;
+  attachments: ReplyAttachment[];
+  created_at: string;
+  updated_at: string;
+}
+
+/** Filter parameters for listing replies */
+export interface ListRepliesRequest {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  status?: 'interested' | 'automated_reply' | 'not_automated_reply';
+  folder?: 'inbox' | 'sent' | 'spam' | 'bounced' | 'all';
+  read?: boolean;
+  campaign_id?: number;
+  sender_email_id?: number;
+  lead_id?: number;
+  tag_ids?: number[];
+}
+
+/** Request to send a reply to an existing thread */
 export interface SendReplyRequest {
-  body: string;
-  subject?: string;
+  message: string;
+  sender_email_id: number;
+  to_emails: EmailAddress[];
+  inject_previous_email_body?: boolean;
+  content_type?: 'html' | 'text';
+  cc_emails?: EmailAddress[];
+  bcc_emails?: EmailAddress[];
+}
+
+/** Request to compose a new email (not a reply) */
+export interface ComposeNewEmailRequest {
+  sender_email_id: number;
+  to_emails: EmailAddress[];
+  subject: string;
+  message: string;
+  content_type?: 'html' | 'text';
+  cc_emails?: EmailAddress[];
+  bcc_emails?: EmailAddress[];
+}
+
+/** Request to forward an email */
+export interface ForwardReplyRequest {
+  sender_email_id: number;
+  to_emails: EmailAddress[];
+  message?: string;
+  content_type?: 'html' | 'text';
+  cc_emails?: EmailAddress[];
+  bcc_emails?: EmailAddress[];
+}
+
+/** Response from conversation thread endpoint */
+export interface ConversationThread {
+  messages: Reply[];
+}
+
+/** Request to attach a scheduled email to an untracked reply */
+export interface AttachScheduledEmailRequest {
+  scheduled_email_id: number;
+}
+
+/** Request to push reply to followup campaign */
+export interface PushToFollowupCampaignRequest {
+  campaign_id: number;
 }
 
 // =============================================================================
