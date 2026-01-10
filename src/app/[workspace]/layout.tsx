@@ -9,7 +9,7 @@ function toSlug(name: string): string {
 }
 
 // Reserved routes that should not be treated as workspace slugs
-const RESERVED_ROUTES = ['login', 'select', 'api', '_next', 'admin'];
+const RESERVED_ROUTES = ['login', 'select', 'api', '_next', 'admin', 'hq'];
 
 interface WorkspaceLayoutProps {
   params: Promise<{ workspace: string }>;
