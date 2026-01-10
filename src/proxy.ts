@@ -1,18 +1,13 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/', '/login', '/api/auth/login'];
+const PUBLIC_PATHS = ['/', '/login', '/select'];
 
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Allow public paths
-  if (PUBLIC_PATHS.some(path => pathname === path || pathname.startsWith('/api/auth'))) {
-    return NextResponse.next();
-  }
-  
-  // Allow static files
-  if (pathname.startsWith('/_next') || pathname.includes('.')) {
+  if (PUBLIC_PATHS.some(path => pathname === path) || pathname.startsWith('/api')) {
     return NextResponse.next();
   }
   
@@ -29,5 +24,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$).*)'],
 };
