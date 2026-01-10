@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/select";
 import { PageContainer, PageHeader, PageContent } from "@/components/layout";
 import { cn } from "@/lib/utils";
-import { useWorkspace } from "@/contexts/workspace-context";
 import type { Campaign } from "@/lib/emailbison/types";
 
 const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
@@ -144,7 +143,6 @@ function formatTimeForApi(time: string): string {
 }
 
 export default function CustomizeCampaignsPage() {
-  const { refreshKey } = useWorkspace();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -185,7 +183,7 @@ export default function CustomizeCampaignsPage() {
       }
     }
     fetchCampaigns();
-  }, [refreshKey]);
+  }, []);
 
   const selectedCampaign = campaigns.find((c) => c.id === selectedCampaignId);
 

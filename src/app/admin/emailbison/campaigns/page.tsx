@@ -5,7 +5,6 @@ import { PageContainer, PageHeader, PageContent } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { typography, colors } from "@/lib/design-tokens";
-import { useWorkspace } from "@/contexts/workspace-context";
 import {
   ArrowLeft,
   RefreshCw,
@@ -35,7 +34,6 @@ interface Campaign {
 type ActionType = "pause" | "resume" | "delete" | "launch";
 
 export default function CampaignManagementPage() {
-  const { refreshKey } = useWorkspace();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +65,7 @@ export default function CampaignManagementPage() {
   // Fetch campaigns - re-runs when workspace changes
   useEffect(() => {
     fetchCampaigns();
-  }, [fetchCampaigns, refreshKey]);
+  }, [fetchCampaigns]);
 
   const handleAction = async (campaignId: number, action: ActionType) => {
     if (actionLoading) return;

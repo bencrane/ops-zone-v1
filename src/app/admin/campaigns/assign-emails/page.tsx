@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronDown, Check, Loader2, X, Mail, Megaphone } from "lucide-react";
 import { PageContainer, PageHeader, PageContent } from "@/components/layout";
-import { useWorkspace } from "@/contexts/workspace-context";
 
 interface Campaign {
   id: number;
@@ -31,7 +30,6 @@ interface CampaignWithEmails extends Campaign {
 type ViewMode = "by-email" | "by-campaign";
 
 export default function AssignEmailAccountsPage() {
-  const { refreshKey, currentWorkspace } = useWorkspace();
   const [campaigns, setCampaigns] = useState<CampaignWithEmails[]>([]);
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [emailsWithAssignments, setEmailsWithAssignments] = useState<EmailWithAssignment[]>([]);
@@ -92,7 +90,7 @@ export default function AssignEmailAccountsPage() {
       }
     }
     fetchData();
-  }, [refreshKey]);
+  }, []);
 
   const handleAssign = async (emailId: number, campaignId: number) => {
     setActionLoading(`${emailId}-${campaignId}`);
@@ -210,11 +208,6 @@ export default function AssignEmailAccountsPage() {
       />
       <PageContent>
         <div className="max-w-2xl">
-          {currentWorkspace && (
-            <p className="text-xs text-zinc-600 mb-4">
-              Workspace: {currentWorkspace.name.replace(/"/g, "")}
-            </p>
-          )}
 
           {/* View Toggle */}
           <div className="flex items-center gap-3 mb-6">

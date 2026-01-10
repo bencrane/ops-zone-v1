@@ -31,7 +31,6 @@ import {
 } from "@/components/ui/popover";
 import { PageContainer, PageHeader, PageContent } from "@/components/layout";
 import { cn } from "@/lib/utils";
-import { useWorkspace } from "@/contexts/workspace-context";
 import type {
   Campaign,
   SequenceStep,
@@ -350,7 +349,6 @@ function StepEditor({
 }
 
 export default function CampaignMessagesPage() {
-  const { refreshKey } = useWorkspace();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
   const [sequenceData, setSequenceData] = useState<SequenceStepsResponse | null>(null);
@@ -393,7 +391,7 @@ export default function CampaignMessagesPage() {
       }
     }
     fetchCampaigns();
-  }, [refreshKey]);
+  }, []);
 
   // Initialize editing state from API steps (only used on initial load)
   const initEditingStates = useCallback((steps: SequenceStep[]) => {

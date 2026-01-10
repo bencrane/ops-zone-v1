@@ -20,7 +20,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageContainer, PageHeader, PageContent } from "@/components/layout";
 import { cn } from "@/lib/utils";
-import { useWorkspace } from "@/contexts/workspace-context";
 
 interface EmailAccount {
   id: number;
@@ -43,7 +42,6 @@ interface EditingState {
 }
 
 export default function EmailAccountSettingsPage() {
-  const { refreshKey } = useWorkspace();
   const [accounts, setAccounts] = useState<EmailAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,7 +76,7 @@ export default function EmailAccountSettingsPage() {
       }
     }
     fetchAccounts();
-  }, [refreshKey]);
+  }, []);
 
   // Fetch account details when selected
   useEffect(() => {

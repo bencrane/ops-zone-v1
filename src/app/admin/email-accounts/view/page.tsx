@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, ChevronDown, Check, Loader2 } from "lucide-react";
 import { PageContainer, PageHeader, PageContent } from "@/components/layout";
-import { useWorkspace } from "@/contexts/workspace-context";
 
 interface Tag {
   id: number;
@@ -24,23 +23,12 @@ interface EmailAccount {
 }
 
 export default function ViewEmailAccountsPage() {
-  const { 
-    workspaces, 
-    currentWorkspace, 
-    switchWorkspace, 
-    isLoading: workspaceLoading,
-    refreshKey 
-  } = useWorkspace();
-  
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Fetch email accounts when workspace changes
+  // Fetch email accounts on mount
   useEffect(() => {
     async function fetchEmailAccounts() {
-      if (!currentWorkspace) return;
-      
       setLoading(true);
       try {
         const res = await fetch("/api/emailbison/email-accounts");
@@ -55,17 +43,7 @@ export default function ViewEmailAccountsPage() {
       }
     }
     fetchEmailAccounts();
-  }, [currentWorkspace, refreshKey]);
-
-  const handleWorkspaceChange = async (workspaceId: number) => {
-    if (workspaceId === currentWorkspace?.id) {
-      setDropdownOpen(false);
-      return;
-    }
-
-    setDropdownOpen(false);
-    await switchWorkspace(workspaceId);
-  };
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -102,46 +80,6 @@ export default function ViewEmailAccountsPage() {
         }
       />
       <PageContent>
-        {/* Workspace Selector */}
-        <div className="mb-6">
-          <div className="relative inline-block">
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              disabled={workspaceLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white hover:border-zinc-500 transition-colors disabled:opacity-50"
-            >
-              {workspaceLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : null}
-              <span className="text-zinc-400 text-sm">Workspace:</span>
-              <span className="font-medium">
-                {currentWorkspace?.name?.replace(/"/g, "") || "Select..."}
-              </span>
-              <ChevronDown className="h-4 w-4 text-zinc-400" />
-            </button>
-
-            {dropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-64 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-10 overflow-hidden">
-                {workspaces.map((workspace) => (
-                  <button
-                    key={workspace.id}
-                    onClick={() => handleWorkspaceChange(workspace.id)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-zinc-800 transition-colors"
-                  >
-                    <span className="text-white">
-                      {workspace.name.replace(/"/g, "")}
-                    </span>
-                    {workspace.id === currentWorkspace?.id && (
-                      <Check className="h-4 w-4 text-emerald-400" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Email Accounts Table */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
