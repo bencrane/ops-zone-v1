@@ -251,11 +251,11 @@ export function Sidebar() {
           Height matches border-b only (no corresponding main content)
           ================================================================ */}
       <div className={cn("px-4 flex items-center justify-between border-b border-zinc-800", BAND_HEIGHT.header)}>
-        <Link href="/admin" className="flex items-center gap-3 group">
+        <Link href="/hq" className="flex items-center gap-3 group">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black transition-transform group-hover:scale-105">
             <Terminal className="h-4 w-4" strokeWidth={2.5} />
           </div>
-          <h1 className="text-sm font-bold tracking-tight">Admin</h1>
+          <h1 className="text-sm font-bold tracking-tight">hq</h1>
         </Link>
         <div className="flex items-center gap-1">
           <Button
