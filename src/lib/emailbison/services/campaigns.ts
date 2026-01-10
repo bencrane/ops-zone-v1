@@ -148,7 +148,7 @@ export async function removeSenderEmails(
 ): Promise<void> {
   const client = getClient();
   await client.delete(`/api/campaigns/${campaignId}/remove-sender-emails`, {
-    data: { sender_email_ids: senderEmailIds },
+    body: { sender_email_ids: senderEmailIds },
     headers: { 'Content-Type': 'application/json' },
   });
 }

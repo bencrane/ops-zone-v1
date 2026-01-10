@@ -312,7 +312,7 @@ export function FilterSidebar({
               >
                 <span className="truncate">{list.name}</span>
                 <Badge variant="secondary" className="ml-auto text-[10px] bg-zinc-700 text-zinc-300">
-                  {list.leadCount}
+                  {list.lead_count}
                 </Badge>
               </DropdownMenuItem>
             ))}

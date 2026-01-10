@@ -202,7 +202,7 @@ function DataCard({
               {error}
             </div>
           )}
-          {!loading && !error && data && (
+          {!loading && !error && data != null && (
             <pre className={`${typography.body} ${colors.text.secondary} overflow-auto max-h-96 bg-zinc-950 rounded-lg p-4 text-xs font-mono`}>
               {JSON.stringify(data, null, 2)}
             </pre>

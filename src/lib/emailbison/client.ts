@@ -46,6 +46,8 @@ export interface RequestOptions {
   headers?: Record<string, string>;
   /** Query parameters */
   params?: Record<string, string | number | boolean | undefined>;
+  /** Request body (for DELETE with body) */
+  body?: unknown;
 }
 
 interface RequestContext {
@@ -209,7 +211,7 @@ export function createClient(config: ClientConfig) {
     },
 
     delete<T>(path: string, options?: RequestOptions): Promise<T> {
-      return request<T>('DELETE', path, undefined, options);
+      return request<T>('DELETE', path, options?.body, options);
     },
   };
 }
