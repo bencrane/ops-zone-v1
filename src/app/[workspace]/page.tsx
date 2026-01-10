@@ -1,90 +1,121 @@
 'use client';
 
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Inbox, Megaphone, Mail, Users, Settings } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { 
+  Megaphone, 
+  Users, 
+  Database, 
+  ChevronRight, 
+  List, 
+  Mail, 
+  Sparkles, 
+  Settings, 
+  Inbox,
+  ArrowLeftRight,
+} from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function WorkspaceDashboard() {
   const params = useParams();
   const workspace = params.workspace as string;
   
-  const navItems = [
+  const navCards = [
     {
       title: 'Inbox',
       description: 'View and respond to email replies',
       icon: Inbox,
       href: `/${workspace}/inbox`,
-      color: 'text-emerald-400',
     },
     {
       title: 'Campaigns',
-      description: 'Manage your email campaigns',
+      description: 'Create, configure, and manage email campaigns',
       icon: Megaphone,
       href: `/${workspace}/campaigns`,
-      color: 'text-blue-400',
     },
     {
       title: 'Email Accounts',
-      description: 'Configure sender email accounts',
+      description: 'Manage sender email accounts and settings',
       icon: Mail,
       href: `/${workspace}/email-accounts`,
-      color: 'text-purple-400',
+    },
+    {
+      title: 'Email Account Settings',
+      description: 'Configure sender names, signatures, and daily limits',
+      icon: Settings,
+      href: `/${workspace}/email-accounts/settings`,
+    },
+    {
+      title: 'Access Leads',
+      description: 'Discover and source new leads for your lists',
+      icon: Database,
+      href: `/${workspace}/access-leads`,
+    },
+    {
+      title: 'Lead Lists',
+      description: 'Manage saved lead lists for campaigns',
+      icon: List,
+      href: `/${workspace}/lead-lists`,
     },
     {
       title: 'Leads',
-      description: 'View and manage your leads',
+      description: 'View and enroll leads into campaigns',
       icon: Users,
       href: `/${workspace}/leads`,
-      color: 'text-cyan-400',
     },
     {
-      title: 'Settings',
-      description: 'Workspace settings and configuration',
-      icon: Settings,
-      href: `/${workspace}/settings`,
-      color: 'text-zinc-400',
+      title: 'Enrich for Emails',
+      description: 'Find and verify email addresses for leads',
+      icon: Sparkles,
+      href: '#',
     },
   ];
-  
+
   return (
-    <div className="min-h-screen bg-black p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white">{workspace}</h1>
-          <p className="text-zinc-400 mt-1">Workspace dashboard</p>
+    <div className="min-h-screen bg-black">
+      <div className="max-w-6xl mx-auto p-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white capitalize">{workspace}</h1>
+            <p className="text-zinc-400 mt-1">Workspace dashboard</p>
+          </div>
+          <Link 
+            href="/select"
+            className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-sm"
+          >
+            <ArrowLeftRight className="h-4 w-4" />
+            Switch workspace
+          </Link>
         </div>
-        
-        <div className="grid gap-4 md:grid-cols-2">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href}>
-              <Card className="cursor-pointer hover:border-zinc-600 transition-colors bg-zinc-900 border-zinc-800 h-full">
+
+        {/* Navigation Cards */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {navCards.map((card) => (
+            <Link key={card.title} href={card.href}>
+              <Card className="bg-zinc-900 border-zinc-800 hover:border-zinc-600 transition-all cursor-pointer group h-full">
                 <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg bg-zinc-800 ${item.color}`}>
-                      <item.icon className="h-5 w-5" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-black">
+                        <card.icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-white">{card.title}</CardTitle>
+                        <CardDescription className="text-zinc-400">
+                          {card.description}
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-white">{item.title}</CardTitle>
-                      <CardDescription className="text-zinc-400">{item.description}</CardDescription>
-                    </div>
+                    <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
                   </div>
                 </CardHeader>
               </Card>
             </Link>
           ))}
         </div>
-        
-        <div className="mt-8 p-4 rounded-lg border border-zinc-800 bg-zinc-900/50">
-          <p className="text-zinc-500 text-sm">
-            Current workspace: <span className="text-white font-mono">/{workspace}</span>
-          </p>
-          <Link href="/select" className="text-zinc-400 text-sm hover:text-white transition-colors">
-            Switch workspace →
-          </Link>
-        </div>
+
       </div>
     </div>
   );
 }
-

@@ -5,6 +5,12 @@ const PUBLIC_PATHS = ['/', '/login', '/select'];
 
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const host = request.headers.get('host') || '';
+  
+  // Skip auth for localhost
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    return NextResponse.next();
+  }
   
   // Allow public paths
   if (PUBLIC_PATHS.some(path => pathname === path) || pathname.startsWith('/api')) {
