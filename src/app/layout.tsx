@@ -5,8 +5,8 @@ import "./globals.css";
 import { WorkspaceProvider } from "@/contexts/workspace-context";
 
 export const metadata: Metadata = {
-  title: "ColdCmd - Cold Email Command Center",
-  description: "Manage your cold email campaigns with precision.",
+  title: "ops.zone",
+  description: "Operations command center.",
 };
 
 export default function RootLayout({
