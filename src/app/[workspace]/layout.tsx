@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { listWorkspaces, switchWorkspace } from '@/lib/emailbison';
 import type { Workspace } from '@/lib/emailbison';
+import { WorkspaceHeader } from '@/components/workspace-header';
 
 // Convert workspace name to URL-friendly slug
 function toSlug(name: string): string {
@@ -60,7 +61,7 @@ export default async function WorkspaceLayout({
   );
 }
 
-// Provides workspace context to children via data attributes and CSS variables
+// Provides workspace context to children via data attributes and header
 function WorkspaceShell({ 
   workspace,
   allWorkspaces,
@@ -77,7 +78,7 @@ function WorkspaceShell({
       data-workspace-name={workspace.name}
       data-workspace-slug={toSlug(workspace.name)}
     >
-      {/* Workspace context will be available to client components via WorkspaceProvider */}
+      {/* Workspace data for client components */}
       <script
         id="workspace-data"
         type="application/json"
@@ -88,7 +89,14 @@ function WorkspaceShell({
           }),
         }}
       />
-      {children}
+      
+      {/* Header with workspace switcher */}
+      <WorkspaceHeader />
+      
+      {/* Page content */}
+      <main>
+        {children}
+      </main>
     </div>
   );
 }
