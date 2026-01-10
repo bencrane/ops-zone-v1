@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 function LoginForm() {
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -20,7 +21,7 @@ function LoginForm() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, remember }),
       });
 
       if (res.ok) {
@@ -46,6 +47,15 @@ function LoginForm() {
         autoFocus
         className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
       />
+      <label className="flex items-center gap-2 text-zinc-400 text-sm cursor-pointer">
+        <input
+          type="checkbox"
+          checked={remember}
+          onChange={(e) => setRemember(e.target.checked)}
+          className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-white focus:ring-0 focus:ring-offset-0"
+        />
+        Remember me
+      </label>
       {error && <p className="text-red-500 text-sm">{error}</p>}
       <button
         type="submit"

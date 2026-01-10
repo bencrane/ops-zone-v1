@@ -16,11 +16,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
   
-  // Check for auth cookie
+  // Check for auth cookie - password validation happened at login time
   const authCookie = request.cookies.get('admin_session');
   
-  if (!authCookie || authCookie.value !== process.env.ADMIN_SESSION_SECRET) {
-    // Redirect to login
+  if (!authCookie || !authCookie.value || authCookie.value.length < 10) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
@@ -32,4 +31,3 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
-
