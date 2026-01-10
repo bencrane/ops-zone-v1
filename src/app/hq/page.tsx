@@ -8,8 +8,7 @@ export default function HQPage() {
   return (
     <div className="max-w-6xl mx-auto p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Command Center</h1>
-        <p className="text-zinc-400 mt-1">Select a module to get started</p>
+        <p className="text-zinc-400">Select a module to get started</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
