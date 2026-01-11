@@ -8,22 +8,30 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Users } from "lucide-react";
-import { LeadList } from "@/types";
-import { getLeadLists, createLeadList, addLeadsToList } from "@/lib/data";
 import { cn } from "@/lib/utils";
+
+interface LeadListWithCount {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description: string | null;
+  member_count: number;
+  created_at: string;
+  updated_at: string;
+}
 
 interface AddToListDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCount: number;
   selectedIds: string[];
+  workspaceId: string;
   onSuccess?: () => void;
 }
 
@@ -32,11 +40,13 @@ export function AddToListDialog({
   onOpenChange,
   selectedCount,
   selectedIds,
+  workspaceId,
   onSuccess,
 }: AddToListDialogProps) {
-  const [lists, setLists] = useState<LeadList[]>([]);
+  const [lists, setLists] = useState<LeadListWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [newListName, setNewListName] = useState("");
@@ -50,29 +60,74 @@ export function AddToListDialog({
       setSelectedListId(null);
       setNewListName("");
       setNewListDescription("");
+      setError(null);
     }
   }, [open]);
 
   const fetchLists = async () => {
     setLoading(true);
-    const data = await getLeadLists();
-    setLists(data);
-    setLoading(false);
+    setError(null);
+    try {
+      const response = await fetch(`/api/lead-lists?workspace_id=${encodeURIComponent(workspaceId)}`);
+      const json = await response.json();
+      if (!response.ok) {
+        throw new Error(json.error || "Failed to fetch lists");
+      }
+      setLists(json.data || []);
+    } catch (err) {
+      console.error("Failed to fetch lead lists:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch lists");
+      setLists([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    setError(null);
     try {
+      let targetListId: string;
+
       if (mode === "new") {
         if (!newListName.trim()) return;
-        const newList = await createLeadList(newListName.trim(), newListDescription.trim() || undefined);
-        await addLeadsToList(selectedIds, newList.id);
+        
+        // Create the new list
+        const createResponse = await fetch("/api/lead-lists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspace_id: workspaceId,
+            name: newListName.trim(),
+            description: newListDescription.trim() || undefined,
+          }),
+        });
+        const createJson = await createResponse.json();
+        if (!createResponse.ok) {
+          throw new Error(createJson.error || "Failed to create list");
+        }
+        targetListId = createJson.data.id;
       } else {
         if (!selectedListId) return;
-        await addLeadsToList(selectedIds, selectedListId);
+        targetListId = selectedListId;
       }
+
+      // Add leads to the list
+      const addResponse = await fetch(`/api/lead-lists/${targetListId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hq_person_ids: selectedIds }),
+      });
+      const addJson = await addResponse.json();
+      if (!addResponse.ok) {
+        throw new Error(addJson.error || "Failed to add leads to list");
+      }
+
       onOpenChange(false);
       onSuccess?.();
+    } catch (err) {
+      console.error("Failed to add leads to list:", err);
+      setError(err instanceof Error ? err.message : "Failed to add leads");
     } finally {
       setSubmitting(false);
     }
@@ -89,6 +144,9 @@ export function AddToListDialog({
           <DialogTitle className="text-white text-base">
             Add {selectedCount} lead{selectedCount !== 1 ? "s" : ""} to list
           </DialogTitle>
+          {error && (
+            <p className="text-xs text-red-400 mt-1">{error}</p>
+          )}
         </DialogHeader>
 
         <div className="space-y-3 py-3">

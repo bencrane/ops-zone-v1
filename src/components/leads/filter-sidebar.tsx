@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, KeyboardEvent } from "react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
   ChevronLeft,
@@ -10,7 +9,6 @@ import {
   Lock,
   Unlock,
   X,
-  Terminal,
   List,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LeadList } from "@/types";
-import { getLeadLists } from "@/lib/data";
 
 // ============================================================================
 // DESIGN CONSTANTS
@@ -46,6 +43,7 @@ export interface Filters {
 export interface FilterSidebarProps {
   filters: Filters;
   onFiltersChange: (filters: Filters) => void;
+  workspaceId?: string;
 }
 
 // ============================================================================
@@ -162,23 +160,27 @@ function ChipInputSection({ title, placeholder, values, onAdd, onRemove }: ChipI
 export function FilterSidebar({ 
   filters, 
   onFiltersChange,
+  workspaceId,
 }: FilterSidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
   const [leadLists, setLeadLists] = useState<LeadList[]>([]);
 
-  // Fetch lead lists on mount
+  // Fetch lead lists from Supabase
   useEffect(() => {
     async function fetchLists() {
+      if (!workspaceId) return;
       try {
-        const lists = await getLeadLists();
-        setLeadLists(lists);
+        const res = await fetch(`/api/lead-lists?workspace_id=${workspaceId}`);
+        if (!res.ok) throw new Error("Failed to fetch lead lists");
+        const json = await res.json();
+        setLeadLists(json.data || []);
       } catch (err) {
         console.error("Failed to fetch lead lists:", err);
       }
     }
     fetchLists();
-  }, []);
+  }, [workspaceId]);
 
   const toggleOpen = () => setIsOpen((prev) => !prev);
   const toggleLocked = () => setIsLocked((prev) => !prev);
@@ -242,14 +244,8 @@ export function FilterSidebar({
 
   return (
     <div className="h-full border-r border-zinc-800 bg-black flex flex-col w-[280px] shrink-0">
-      {/* Row 0: HQ Header */}
-      <div className={cn("px-4 flex items-center justify-between border-b border-zinc-800", BAND_HEIGHT.header)}>
-        <Link href="/hq" className="flex items-center gap-3 group">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black transition-transform group-hover:scale-105">
-            <Terminal className="h-4 w-4" strokeWidth={2.5} />
-          </div>
-          <h1 className="text-sm font-bold tracking-tight">hq</h1>
-        </Link>
+      {/* Row 0: Sidebar Controls */}
+      <div className={cn("px-4 flex items-center justify-end border-b border-zinc-800", BAND_HEIGHT.header)}>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"

@@ -678,36 +678,8 @@ export async function removeLeadFromCampaign(
   }
 }
 
-// Mock Lead Lists
-export const leadLists: LeadList[] = [
-  {
-    id: "list_001",
-    name: "SaaS Decision Makers",
-    description: "CTOs and VPs at SaaS companies",
-    lead_ids: ["lead_001", "lead_002", "lead_004", "lead_009", "lead_010", "lead_017"],
-    lead_count: 6,
-    created_at: "2024-01-10T10:00:00Z",
-    updated_at: "2024-01-15T14:30:00Z",
-  },
-  {
-    id: "list_002",
-    name: "Agency Founders",
-    description: "Marketing and creative agency owners",
-    lead_ids: ["lead_003", "lead_015"],
-    lead_count: 2,
-    created_at: "2024-01-20T09:00:00Z",
-    updated_at: "2024-02-01T11:00:00Z",
-  },
-  {
-    id: "list_003",
-    name: "Enterprise Prospects",
-    description: "1000+ employee companies",
-    lead_ids: ["lead_005", "lead_008", "lead_019"],
-    lead_count: 3,
-    created_at: "2024-02-05T14:00:00Z",
-    updated_at: "2024-02-10T16:30:00Z",
-  },
-];
+// Lead Lists - now stored in Supabase outbound-db, not in memory
+export const leadLists: LeadList[] = [];
 
 export async function getLeadLists(): Promise<LeadList[]> {
   await new Promise((resolve) => setTimeout(resolve, 100));

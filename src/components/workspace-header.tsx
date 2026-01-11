@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Terminal } from 'lucide-react';
 
 interface Workspace {
   id: number;
@@ -68,14 +68,18 @@ export function WorkspaceHeader() {
   return (
     <header className="border-b border-zinc-800 bg-zinc-950">
       <div className="px-6 h-14 flex items-center justify-between">
-        {/* Left: Page Title */}
-        <div className="flex items-center gap-4">
+        {/* Left: HQ Icon + Page Title */}
+        <div className="flex items-center gap-3">
           <Link 
             href="/hq"
-            className="text-white font-semibold text-lg hover:text-zinc-300 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black hover:bg-zinc-200 transition-colors"
+            title="Back to HQ"
           >
-            {pageTitle}
+            <Terminal className="h-4 w-4" strokeWidth={2.5} />
           </Link>
+          <span className="text-white font-semibold text-lg">
+            {pageTitle}
+          </span>
         </div>
 
         {/* Right: Workspace Switcher */}
