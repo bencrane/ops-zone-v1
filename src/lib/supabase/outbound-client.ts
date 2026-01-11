@@ -282,7 +282,7 @@ export async function getListsForPerson(
 
   // Filter by workspace and extract the list objects
   return (data || [])
-    .map((m) => m.lead_lists as LeadList)
+    .map((m) => m.lead_lists as unknown as LeadList)
     .filter((list) => list && list.workspace_id === workspaceId);
 }
 

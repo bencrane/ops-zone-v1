@@ -68,7 +68,9 @@ export function ReplyListItem({ reply, isSelected, onClick }: ReplyListItemProps
                   <Paperclip className="h-3.5 w-3.5 text-zinc-500" />
                 )}
                 {isUntracked && (
-                  <AlertTriangle className="h-3.5 w-3.5 text-orange-400" title="Untracked reply" />
+                  <span title="Untracked reply">
+                    <AlertTriangle className="h-3.5 w-3.5 text-orange-400" />
+                  </span>
                 )}
               </div>
             </div>

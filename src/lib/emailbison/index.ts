@@ -134,7 +134,8 @@ export type {
 
   // Replies
   Reply,
-  ReplyStatus,
+  ReplyFolder,
+  ReplyType,
   ListRepliesRequest,
   SendReplyRequest,
 

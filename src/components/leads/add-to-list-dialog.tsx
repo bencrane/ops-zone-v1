@@ -218,7 +218,7 @@ export function AddToListDialog({
                             )}
                           </div>
                           <span className="text-xs text-zinc-500 ml-3 shrink-0">
-                            {list.lead_count}
+                            {list.member_count}
                           </span>
                         </div>
                       ))}
