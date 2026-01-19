@@ -32,6 +32,7 @@ interface BookingContext {
     attended: boolean;
     video_url: string | null;
     location: string;
+    organizer_email: string | null;
     person_id: string;
     person_name: string;
     person_email: string;
@@ -260,6 +261,9 @@ export default function MeetingOutcomePage() {
                     {new Date(context.booking.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </span>
                   <span>{context.booking.company_domain}</span>
+                  {context.booking.organizer_email && (
+                    <span className="text-zinc-600">via {context.booking.organizer_email}</span>
+                  )}
                 </div>
               </div>
               {context.booking.deal_notes && (

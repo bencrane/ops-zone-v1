@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Terminal, FileText, Loader2, ArrowLeft, DollarSign, CheckCircle2 } from 'lucide-react';
+import { Terminal, Layers, Loader2, ArrowLeft, Calendar, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -47,53 +47,50 @@ interface BookingContext {
   };
 }
 
-interface ProposalFormData {
-  proposalType: string;
-  monthlyValue: string;
-  paymentType: string;
-  scopeSummary: string;
-  specialTerms: string;
+interface OutcomeFormData {
+  outcome: string;
+  nextStep: string;
+  notes: string;
+  followupSubject: string;
+  followupMessage: string;
 }
 
 type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
 
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-function formatCurrency(value: string): string {
-  const num = parseFloat(value);
-  if (isNaN(num)) return '';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num);
+export interface MeetingOutcomeFormProps {
+  bookingId: string;
+  concept: string;
+  conceptColor?: string;
+  backHref: string;
+  backLabel: string;
 }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export default function ProposalGenerationPage() {
-  const params = useParams();
-  const bookingId = params.bookingId as string;
-
+export function MeetingOutcomeForm({
+  bookingId,
+  concept,
+  conceptColor = 'text-green-500',
+  backHref,
+  backLabel,
+}: MeetingOutcomeFormProps) {
   const [context, setContext] = useState<BookingContext | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submissionState, setSubmissionState] = useState<SubmissionState>('idle');
   const [submissionId, setSubmissionId] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<ProposalFormData>({
-    proposalType: '',
-    monthlyValue: '',
-    paymentType: 'one_time', // Default to one_time
-    scopeSummary: '',
-    specialTerms: '',
+  const [formData, setFormData] = useState<OutcomeFormData>({
+    outcome: '',
+    nextStep: '',
+    notes: '',
+    followupSubject: '',
+    followupMessage: '',
   });
 
+  // Fetch booking context
   useEffect(() => {
     async function fetchContext() {
       try {
@@ -108,6 +105,14 @@ export default function ProposalGenerationPage() {
 
         const data = await res.json();
         setContext(data);
+        
+        // Pre-populate followup subject with booking title
+        if (data.booking?.title) {
+          setFormData(prev => ({
+            ...prev,
+            followupSubject: `Following up: ${data.booking.title}`,
+          }));
+        }
       } catch (err) {
         console.error('Error fetching booking context:', err);
         setError(err instanceof Error ? err.message : 'Failed to load booking');
@@ -124,7 +129,9 @@ export default function ProposalGenerationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!isFormValid) return;
+    if (!formData.outcome || !formData.nextStep) {
+      return;
+    }
 
     setSubmissionState('submitting');
     setError(null);
@@ -132,14 +139,15 @@ export default function ProposalGenerationPage() {
     try {
       const payload = {
         booking_id: bookingId,
-        proposal_type: formData.proposalType,
-        monthly_value: parseFloat(formData.monthlyValue),
-        payment_type: formData.paymentType,
-        scope_summary: formData.scopeSummary,
-        special_terms: formData.specialTerms || null,
+        concept: concept,
+        outcome: formData.outcome,
+        next_step: formData.nextStep,
+        notes: formData.notes || null,
+        followup_subject: formData.nextStep === 'send_followup' ? formData.followupSubject || null : null,
+        followup_message: formData.nextStep === 'send_followup' ? formData.followupMessage || null : null,
       };
 
-      const res = await fetch('/api/forms/proposal', {
+      const res = await fetch('/api/forms/outcome', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -155,12 +163,13 @@ export default function ProposalGenerationPage() {
       setSubmissionState('success');
     } catch (err) {
       console.error('Submission error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to submit proposal');
+      setError(err instanceof Error ? err.message : 'Failed to submit outcome');
       setSubmissionState('error');
     }
   };
 
-  const isFormValid = formData.proposalType && formData.monthlyValue && formData.paymentType && formData.scopeSummary;
+  const isFormValid = formData.outcome && formData.nextStep;
+  const showFollowupFields = formData.nextStep === 'send_followup';
 
   // Success state
   if (submissionState === 'success') {
@@ -170,9 +179,9 @@ export default function ProposalGenerationPage() {
           <div className="rounded-full bg-green-500/10 p-4 w-fit mx-auto mb-6">
             <CheckCircle2 className="h-12 w-12 text-green-500" />
           </div>
-          <h1 className="text-2xl font-semibold mb-2">Proposal Submitted</h1>
+          <h1 className="text-2xl font-semibold mb-2">Outcome Recorded</h1>
           <p className="text-zinc-400 mb-6">
-            Your proposal has been successfully submitted.
+            Meeting outcome has been successfully submitted.
             {submissionId && (
               <span className="block text-xs text-zinc-600 mt-2">
                 Submission ID: {submissionId}
@@ -180,9 +189,9 @@ export default function ProposalGenerationPage() {
             )}
           </p>
           <div className="flex flex-col gap-3">
-            <Link href="/hq/pipeline">
+            <Link href={backHref}>
               <Button className="w-full bg-white text-black hover:bg-zinc-200">
-                Return to Pipeline
+                {backLabel}
               </Button>
             </Link>
             <Button
@@ -190,16 +199,16 @@ export default function ProposalGenerationPage() {
               onClick={() => {
                 setSubmissionState('idle');
                 setFormData({
-                  proposalType: '',
-                  monthlyValue: '',
-                  paymentType: 'one_time',
-                  scopeSummary: '',
-                  specialTerms: '',
+                  outcome: '',
+                  nextStep: '',
+                  notes: '',
+                  followupSubject: context?.booking?.title ? `Following up: ${context.booking.title}` : '',
+                  followupMessage: '',
                 });
               }}
               className="text-zinc-400 hover:text-white"
             >
-              Create Another Proposal
+              Record Another Outcome
             </Button>
           </div>
         </div>
@@ -220,16 +229,19 @@ export default function ProposalGenerationPage() {
             >
               <Terminal className="h-4 w-4" strokeWidth={2.5} />
             </Link>
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-zinc-400" />
-              <h1 className="text-lg font-semibold">Generate Proposal</h1>
+            <div className="flex items-center gap-3">
+              <Layers className="h-5 w-5 text-zinc-400" />
+              <h1 className="text-lg font-semibold">Meeting Outcome</h1>
+              <Badge variant="outline" className={`${conceptColor} border-current text-xs`}>
+                {concept}
+              </Badge>
             </div>
           </div>
           
-          <Link href="/hq/pipeline">
+          <Link href={backHref}>
             <Button variant="ghost" size="sm" className="gap-2 text-zinc-400 hover:text-white">
               <ArrowLeft className="h-4 w-4" />
-              Back to Pipeline
+              {backLabel}
             </Button>
           </Link>
         </div>
@@ -244,9 +256,9 @@ export default function ProposalGenerationPage() {
         ) : error && submissionState !== 'error' ? (
           <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-6 text-center">
             <p className="text-red-400 mb-4">{error}</p>
-            <Link href="/hq/pipeline">
+            <Link href={backHref}>
               <Button variant="outline" className="border-red-800 text-red-400 hover:bg-red-950">
-                Back to Pipeline
+                {backLabel}
               </Button>
             </Link>
           </div>
@@ -256,12 +268,14 @@ export default function ProposalGenerationPage() {
             <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-base font-medium">
-                  Proposal for {context.booking.company_name}
+                  {context.booking.person_name} @ {context.booking.company_name}
                 </h2>
                 <div className="flex items-center gap-4 text-xs text-zinc-500">
-                  <span>{context.booking.person_name}</span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {new Date(context.booking.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
                   <span>{context.booking.company_domain}</span>
-                  <span>{context.booking.deal_stage}</span>
                   {context.booking.organizer_email && (
                     <span className="text-zinc-600">via {context.booking.organizer_email}</span>
                   )}
@@ -274,105 +288,88 @@ export default function ProposalGenerationPage() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Proposal Type */}
+              {/* Outcome */}
               <div className="space-y-2">
-                <Label htmlFor="proposalType" className="text-zinc-300">
-                  Proposal Type <span className="text-red-400">*</span>
+                <Label htmlFor="outcome" className="text-zinc-300">
+                  Outcome <span className="text-red-400">*</span>
                 </Label>
                 <Select
-                  value={formData.proposalType}
-                  onValueChange={(value) => setFormData({ ...formData, proposalType: value })}
+                  value={formData.outcome}
+                  onValueChange={(value) => setFormData({ ...formData, outcome: value })}
                 >
                   <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white">
-                    <SelectValue placeholder="Select proposal type" />
+                    <SelectValue placeholder="Select meeting outcome" />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-700">
-                    <SelectItem value="standard">Standard — Monthly retainer</SelectItem>
-                    <SelectItem value="custom">Custom — Tailored scope</SelectItem>
-                    <SelectItem value="enterprise">Enterprise — Full engagement</SelectItem>
+                    <SelectItem value="attended">Attended - Meeting completed</SelectItem>
+                    <SelectItem value="no_show">No Show - Contact didn't attend</SelectItem>
+                    <SelectItem value="rescheduled">Rescheduled - Meeting moved</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Monthly Value + Payment Type (grouped) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Monthly Value */}
-                <div className="space-y-2">
-                  <Label htmlFor="monthlyValue" className="text-zinc-300">
-                    Value <span className="text-red-400">*</span>
-                  </Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+              {/* Next Step */}
+              <div className="space-y-2">
+                <Label htmlFor="nextStep" className="text-zinc-300">
+                  Next Step <span className="text-red-400">*</span>
+                </Label>
+                <Select
+                  value={formData.nextStep}
+                  onValueChange={(value) => setFormData({ ...formData, nextStep: value })}
+                >
+                  <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white">
+                    <SelectValue placeholder="Select next step" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-zinc-700">
+                    <SelectItem value="send_followup">Send Follow-up Email</SelectItem>
+                    <SelectItem value="schedule_another">Schedule Another Meeting</SelectItem>
+                    <SelectItem value="send_proposal">Send Proposal</SelectItem>
+                    <SelectItem value="close_won">Close Won</SelectItem>
+                    <SelectItem value="close_lost">Close Lost</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="notes" className="text-zinc-300">Notes</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Key takeaways, action items, observations..."
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  className="bg-zinc-900 border-zinc-700 text-white min-h-[120px] placeholder:text-zinc-600"
+                />
+              </div>
+
+              {/* Conditional Follow-up Fields */}
+              {showFollowupFields && (
+                <div className="space-y-4 p-4 rounded-lg border border-zinc-800 bg-zinc-900/30">
+                  <h3 className="text-sm font-medium text-zinc-300">Follow-up Email</h3>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="followupSubject" className="text-zinc-400 text-sm">Subject</Label>
                     <Input
-                      id="monthlyValue"
-                      type="number"
-                      placeholder="10000"
-                      value={formData.monthlyValue}
-                      onChange={(e) => setFormData({ ...formData, monthlyValue: e.target.value })}
-                      className="bg-zinc-900 border-zinc-700 text-white pl-10 placeholder:text-zinc-600"
+                      id="followupSubject"
+                      placeholder="Email subject..."
+                      value={formData.followupSubject}
+                      onChange={(e) => setFormData({ ...formData, followupSubject: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-600"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="followupMessage" className="text-zinc-400 text-sm">Message</Label>
+                    <Textarea
+                      id="followupMessage"
+                      placeholder="Your followup message to the client..."
+                      value={formData.followupMessage}
+                      onChange={(e) => setFormData({ ...formData, followupMessage: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white min-h-[150px] placeholder:text-zinc-600"
                     />
                   </div>
                 </div>
-
-                {/* Payment Type */}
-                <div className="space-y-2">
-                  <Label htmlFor="paymentType" className="text-zinc-300">
-                    Payment Type <span className="text-red-400">*</span>
-                  </Label>
-                  <Select
-                    value={formData.paymentType}
-                    onValueChange={(value) => setFormData({ ...formData, paymentType: value })}
-                  >
-                    <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white">
-                      <SelectValue placeholder="Select payment type" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-700">
-                      <SelectItem value="one_time">One-Time Payment</SelectItem>
-                      <SelectItem value="monthly">Monthly Subscription</SelectItem>
-                      <SelectItem value="quarterly">Quarterly Subscription</SelectItem>
-                      <SelectItem value="annual">Annual Subscription</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Value summary */}
-              {formData.monthlyValue && (
-                <p className="text-xs text-zinc-500 -mt-4">
-                  {formData.paymentType === 'one_time' && `${formatCurrency(formData.monthlyValue)} one-time`}
-                  {formData.paymentType === 'monthly' && `${formatCurrency(formData.monthlyValue)}/month · ${formatCurrency((parseFloat(formData.monthlyValue) * 12).toString())}/year`}
-                  {formData.paymentType === 'quarterly' && `${formatCurrency(formData.monthlyValue)}/quarter · ${formatCurrency((parseFloat(formData.monthlyValue) * 4).toString())}/year`}
-                  {formData.paymentType === 'annual' && `${formatCurrency(formData.monthlyValue)}/year`}
-                </p>
               )}
-
-              {/* Scope Summary */}
-              <div className="space-y-2">
-                <Label htmlFor="scopeSummary" className="text-zinc-300">
-                  Scope Summary <span className="text-red-400">*</span>
-                </Label>
-                <Textarea
-                  id="scopeSummary"
-                  placeholder="Describe the deliverables, services, and expected outcomes..."
-                  value={formData.scopeSummary}
-                  onChange={(e) => setFormData({ ...formData, scopeSummary: e.target.value })}
-                  className="bg-zinc-900 border-zinc-700 text-white min-h-[150px] placeholder:text-zinc-600"
-                />
-              </div>
-
-              {/* Special Terms */}
-              <div className="space-y-2">
-                <Label htmlFor="specialTerms" className="text-zinc-300">
-                  Special Terms <span className="text-zinc-500">(optional)</span>
-                </Label>
-                <Textarea
-                  id="specialTerms"
-                  placeholder="Payment terms, exclusivity clauses, pilot period, etc..."
-                  value={formData.specialTerms}
-                  onChange={(e) => setFormData({ ...formData, specialTerms: e.target.value })}
-                  className="bg-zinc-900 border-zinc-700 text-white min-h-[100px] placeholder:text-zinc-600"
-                />
-              </div>
 
               {/* Error State */}
               {submissionState === 'error' && (
@@ -394,7 +391,7 @@ export default function ProposalGenerationPage() {
                       Submitting...
                     </>
                   ) : (
-                    'Generate Proposal'
+                    'Submit Outcome'
                   )}
                 </Button>
               </div>

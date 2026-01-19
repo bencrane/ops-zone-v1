@@ -1,8 +1,27 @@
 'use client';
 
-import Link from 'next/link';
-import { Send, ChevronRight, Layers } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Send, Layers, Lightbulb } from 'lucide-react';
+import { ModuleCard } from '@/components/ui/module-card';
+
+const modules = [
+  {
+    title: 'Outbound',
+    description: 'Email campaigns, inbox, and lead management',
+    href: '/hq/outbound',
+    icon: Send,
+  },
+  {
+    title: 'Pipeline',
+    description: 'Deal tracking and sales pipeline',
+    href: '/hq/pipeline',
+    icon: Layers,
+  },
+  {
+    title: 'Concepts',
+    href: '/hq/concepts',
+    icon: Lightbulb,
+  },
+];
 
 export default function HQPage() {
   return (
@@ -12,49 +31,16 @@ export default function HQPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Link href="/hq/outbound">
-          <Card className="bg-zinc-900 border-zinc-800 hover:border-zinc-600 transition-all cursor-pointer group h-full">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-black">
-                    <Send className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-white">Outbound</CardTitle>
-                    <CardDescription className="text-zinc-400">
-                      Email campaigns, inbox, and lead management
-                    </CardDescription>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        <Link href="/hq/pipeline">
-          <Card className="bg-zinc-900 border-zinc-800 hover:border-zinc-600 transition-all cursor-pointer group h-full">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-black">
-                    <Layers className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-white">Pipeline</CardTitle>
-                    <CardDescription className="text-zinc-400">
-                      Deal tracking and sales pipeline
-                    </CardDescription>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
+        {modules.map((module) => (
+          <ModuleCard
+            key={module.title}
+            title={module.title}
+            description={module.description}
+            href={module.href}
+            icon={module.icon}
+          />
+        ))}
       </div>
     </div>
   );
 }
-

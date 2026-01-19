@@ -26,6 +26,7 @@ interface Deal {
   created_at: string;
   updated_at: string;
   closed_at: string | null;
+  organizer_email: string | null;
   company_id: string;
   company_name: string;
   company_domain: string;
@@ -268,6 +269,7 @@ export default function PipelinePage() {
                 <TableRow className="border-zinc-800 hover:bg-transparent">
                   <TableHead className="text-zinc-400 font-medium">Company</TableHead>
                   <TableHead className="text-zinc-400 font-medium">Contact</TableHead>
+                  <TableHead className="text-zinc-400 font-medium">Organizer</TableHead>
                   <TableHead className="text-zinc-400 font-medium">Stage</TableHead>
                   <TableHead className="text-zinc-400 font-medium">Meeting</TableHead>
                   <TableHead className="text-zinc-400 font-medium">Status</TableHead>
@@ -292,6 +294,11 @@ export default function PipelinePage() {
                         <div className="text-zinc-300">{deal.contact_name}</div>
                         <div className="text-xs text-zinc-500">{deal.contact_email}</div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-xs text-zinc-400">
+                        {deal.organizer_email || '—'}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Badge className={`${STAGE_COLORS[deal.stage] || 'bg-zinc-800'} border`}>

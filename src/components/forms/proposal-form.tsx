@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Terminal, FileText, Loader2, ArrowLeft, DollarSign, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -57,6 +57,14 @@ interface ProposalFormData {
 
 type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
 
+export interface ProposalFormProps {
+  bookingId: string;
+  concept: string;
+  conceptColor?: string;
+  backHref: string;
+  backLabel: string;
+}
+
 // =============================================================================
 // HELPERS
 // =============================================================================
@@ -76,10 +84,13 @@ function formatCurrency(value: string): string {
 // COMPONENT
 // =============================================================================
 
-export default function ProposalGenerationPage() {
-  const params = useParams();
-  const bookingId = params.bookingId as string;
-
+export function ProposalForm({
+  bookingId,
+  concept,
+  conceptColor = 'text-green-500',
+  backHref,
+  backLabel,
+}: ProposalFormProps) {
   const [context, setContext] = useState<BookingContext | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +100,7 @@ export default function ProposalGenerationPage() {
   const [formData, setFormData] = useState<ProposalFormData>({
     proposalType: '',
     monthlyValue: '',
-    paymentType: 'one_time', // Default to one_time
+    paymentType: 'one_time',
     scopeSummary: '',
     specialTerms: '',
   });
@@ -132,6 +143,7 @@ export default function ProposalGenerationPage() {
     try {
       const payload = {
         booking_id: bookingId,
+        concept: concept,
         proposal_type: formData.proposalType,
         monthly_value: parseFloat(formData.monthlyValue),
         payment_type: formData.paymentType,
@@ -180,9 +192,9 @@ export default function ProposalGenerationPage() {
             )}
           </p>
           <div className="flex flex-col gap-3">
-            <Link href="/hq/pipeline">
+            <Link href={backHref}>
               <Button className="w-full bg-white text-black hover:bg-zinc-200">
-                Return to Pipeline
+                {backLabel}
               </Button>
             </Link>
             <Button
@@ -220,16 +232,19 @@ export default function ProposalGenerationPage() {
             >
               <Terminal className="h-4 w-4" strokeWidth={2.5} />
             </Link>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <FileText className="h-5 w-5 text-zinc-400" />
               <h1 className="text-lg font-semibold">Generate Proposal</h1>
+              <Badge variant="outline" className={`${conceptColor} border-current text-xs`}>
+                {concept}
+              </Badge>
             </div>
           </div>
           
-          <Link href="/hq/pipeline">
+          <Link href={backHref}>
             <Button variant="ghost" size="sm" className="gap-2 text-zinc-400 hover:text-white">
               <ArrowLeft className="h-4 w-4" />
-              Back to Pipeline
+              {backLabel}
             </Button>
           </Link>
         </div>
@@ -244,9 +259,9 @@ export default function ProposalGenerationPage() {
         ) : error && submissionState !== 'error' ? (
           <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-6 text-center">
             <p className="text-red-400 mb-4">{error}</p>
-            <Link href="/hq/pipeline">
+            <Link href={backHref}>
               <Button variant="outline" className="border-red-800 text-red-400 hover:bg-red-950">
-                Back to Pipeline
+                {backLabel}
               </Button>
             </Link>
           </div>
